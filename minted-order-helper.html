@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sara Luke Creative — Minted Orders</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --pink-light: #F3C4D6; --navy: #394350; --pink-dark: #D56D85;
+    --green: #58634F; --tangerine: #E49855; --bg: #faf8f6;
+    --card: #ffffff; --border: #e8e0d8; --text: #2a2420; --muted: #8a7f78;
+    --status-proof: #7b9cc4;
+    --status-approved: #9b7fc4;
+    --status-production: #c4a44a;
+    --status-complete: #58634F;
+  }
+  body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  header { background: var(--navy); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--pink-dark); }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 1.25rem; color: var(--pink-light); font-weight: 400; }
+  header .subtitle { font-size: 0.7rem; color: var(--pink-dark); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  #refresh-btn { background: transparent; border: 1px solid var(--pink-dark); color: var(--pink-light); padding: 6px 14px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+  #refresh-btn:hover { background: var(--pink-dark); color: white; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; display: inline-block; }
+  .status-dot.loaded { background: #7cb87c; }
+  .status-dot.loading { background: var(--tangerine); animation: pulse 1s infinite; }
+  .status-dot.error { background: #c97070; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .main { max-width: 960px; margin: 0 auto; padding: 28px 24px; }
+  .loading-state, .error-state { text-align: center; padding: 80px 24px; color: var(--muted); }
+  .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--pink-dark); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TOOLBAR */
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .order-count { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-right: auto; white-space: nowrap; }
+  .filter-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .filter-btn:hover { border-color: var(--navy); color: var(--navy); }
+  .filter-btn.active { background: var(--navy); border-color: var(--navy); color: white; }
+  .filter-btn.f-proof.active { background: var(--status-proof); border-color: var(--status-proof); }
+  .filter-btn.f-approved.active { background: var(--status-approved); border-color: var(--status-approved); }
+  .filter-btn.f-production.active { background: var(--status-production); border-color: var(--status-production); }
+  .filter-btn.f-complete.active { background: var(--status-complete); border-color: var(--status-complete); }
+
+  /* BULK BAR */
+  .bulk-bar { background: var(--navy); border-radius: 6px; padding: 10px 16px; margin-bottom: 14px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .bulk-bar.visible { display: flex; }
+  .bulk-count { font-size: 0.72rem; color: var(--pink-light); font-weight: 600; margin-right: auto; }
+  .bulk-btn { padding: 6px 14px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; }
+  .bulk-btn-proof { background: var(--status-proof); color: white; }
+  .bulk-btn-approved { background: var(--status-approved); color: white; }
+  .bulk-btn-production { background: var(--status-production); color: white; }
+  .bulk-btn-complete { background: var(--status-complete); color: white; }
+  .bulk-btn-clear { background: transparent; color: #aaa; border: 1px solid #555; }
+  .bulk-btn:hover { opacity: 0.85; }
+
+  /* SELECT ALL ROW */
+  .select-all-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.7rem; color: var(--muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .select-all-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
+
+  /* ORDER CARDS */
+  .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s; }
+  .order-card:hover { box-shadow: 0 3px 12px rgba(57,67,80,0.07); }
+  .order-card.hidden { display: none; }
+  .order-card.selected { border-color: var(--navy); box-shadow: 0 0 0 2px rgba(57,67,80,0.15); }
+
+  /* STATUS LEFT BORDER */
+  .order-card.s-proof { border-left: 4px solid var(--status-proof); }
+  .order-card.s-approved { border-left: 4px solid var(--status-approved); }
+  .order-card.s-production { border-left: 4px solid var(--status-production); }
+  .order-card.s-complete { border-left: 4px solid var(--status-complete); opacity: 0.5; }
+
+  .card-header { padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+  .card-header:hover { background: #fdf9fb; }
+  .card-checkbox { flex-shrink: 0; width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
+  .order-name { font-family: 'Playfair Display', serif; font-size: 0.95rem; font-weight: 600; color: var(--navy); min-width: 150px; }
+  .order-card.s-complete .order-name { text-decoration: line-through; color: var(--muted); }
+  .order-meta { font-size: 0.7rem; color: var(--muted); display: flex; gap: 12px; flex: 1; flex-wrap: wrap; align-items: center; }
+  .badge { font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .badge-design { background: #faeef2; color: var(--pink-dark); }
+  .status-badge { font-size: 0.6rem; padding: 2px 9px; border-radius: 20px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: white; }
+  .sb-proof { background: var(--status-proof); }
+  .sb-approved { background: var(--status-approved); }
+  .sb-production { background: var(--status-production); }
+  .sb-complete { background: var(--status-complete); }
+  .chevron { color: var(--muted); font-size: 0.7rem; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
+  .order-card.open .chevron { transform: rotate(180deg); }
+
+  .card-body { display: none; padding: 0 16px 16px; border-top: 1px solid var(--border); }
+  .order-card.open .card-body { display: block; }
+  .section-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; margin: 12px 0 5px; }
+  .pers-box { background: #f8f5f2; border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; font-size: 0.82rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; font-family: 'Montserrat', sans-serif; }
+  .file-path { font-size: 0.7rem; color: var(--muted); font-family: 'Courier New', monospace; word-break: break-all; background: #f8f5f2; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--border); }
+
+  /* PRODUCTION NOTE */
+  .production-note-area { margin-top: 10px; }
+  .production-note-display { font-size: 0.78rem; color: var(--text); background: #fffbf0; border: 1px solid #e8dfc0; border-radius: 4px; padding: 8px 12px; font-style: italic; display: none; }
+  .production-note-display.visible { display: block; }
+  .note-edit-row { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+  .note-input { flex: 1; border: 1px solid var(--border); border-radius: 4px; padding: 7px 10px; font-family: 'Montserrat', sans-serif; font-size: 0.75rem; color: var(--text); background: white; }
+  .note-input:focus { outline: none; border-color: var(--status-production); }
+  .note-save-btn { background: var(--status-production); color: white; border: none; border-radius: 4px; padding: 7px 14px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+  .note-save-btn:hover { opacity: 0.85; }
+
+  .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; white-space: nowrap; }
+  .btn-navy { background: var(--navy); color: white; }
+  .btn-navy:hover { background: #2a3140; }
+  .btn-outline { background: white; color: var(--navy); border: 1.5px solid var(--navy); }
+  .btn-outline:hover { background: var(--navy); color: white; }
+  .btn-pink { background: var(--pink-dark); color: white; }
+  .btn-pink:hover { background: #c45e76; }
+  .btn.copied { background: var(--green) !important; border-color: var(--green) !important; color: white !important; }
+
+  /* STATUS BUTTONS IN CARD */
+  .status-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .s-btn { padding: 6px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+  .s-btn-proof { background: white; color: var(--status-proof); border-color: var(--status-proof); }
+  .s-btn-proof.active, .s-btn-proof:hover { background: var(--status-proof); color: white; }
+  .s-btn-approved { background: white; color: var(--status-approved); border-color: var(--status-approved); }
+  .s-btn-approved.active, .s-btn-approved:hover { background: var(--status-approved); color: white; }
+  .s-btn-production { background: white; color: var(--status-production); border-color: var(--status-production); }
+  .s-btn-production.active, .s-btn-production:hover { background: var(--status-production); color: white; }
+  .s-btn-complete { background: white; color: var(--status-complete); border-color: var(--status-complete); }
+  .s-btn-complete.active, .s-btn-complete:hover { background: var(--status-complete); color: white; }
+  .s-btn-none { background: white; color: var(--muted); border-color: var(--border); }
+  .s-btn-none:hover { background: #f0eeec; }
+
+  .date-label { font-size: 0.65rem; }
+  .empty { text-align: center; padding: 60px; color: var(--muted); font-size: 0.85rem; }
+
+  /* PRODUCTION NOTE MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.visible { display: flex; }
+  .modal { background: white; border-radius: 8px; padding: 28px; width: 440px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--navy); margin-bottom: 6px; }
+  .modal p { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; }
+  .modal textarea { width: 100%; border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; font-family: 'Montserrat', sans-serif; font-size: 0.8rem; color: var(--text); resize: vertical; min-height: 80px; }
+  .modal textarea:focus { outline: none; border-color: var(--status-production); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+  .modal-skip { background: white; color: var(--muted); border: 1px solid var(--border); padding: 8px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .modal-save { background: var(--status-production); color: white; border: none; padding: 8px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .modal-save:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Sara Luke Creative</h1>
+    <div class="subtitle">Minted Orders</div>
+  </div>
+  <div class="header-right">
+    <span class="status-dot" id="status-dot"></span>
+    <button id="refresh-btn" onclick="loadOrders()">↺ Refresh</button>
+  </div>
+</header>
+
+<div class="main">
+  <div id="toolbar" style="display:none">
+    <div class="toolbar">
+      <span class="order-count" id="order-count"></span>
+      <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">All</button>
+      <button class="filter-btn f-proof" id="filter-proof" onclick="setFilter('proof')">Proof Sent</button>
+      <button class="filter-btn f-approved" id="filter-approved" onclick="setFilter('approved')">Approved</button>
+      <button class="filter-btn f-production" id="filter-production" onclick="setFilter('production')">In Production</button>
+      <button class="filter-btn f-complete" id="filter-complete" onclick="setFilter('complete')">Completed</button>
+      <button class="filter-btn" id="filter-pending" onclick="setFilter('pending')">No Status</button>
+      <button id="refresh-btn2" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:20px;font-family:Montserrat,sans-serif;font-size:0.65rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;" onclick="loadOrders()">↺ Refresh</button>
+    </div>
+
+    <div class="bulk-bar" id="bulk-bar">
+      <span class="bulk-count" id="bulk-count">0 selected</span>
+      <button class="bulk-btn bulk-btn-proof" onclick="bulkSetStatus('proof')">Proof Sent</button>
+      <button class="bulk-btn bulk-btn-approved" onclick="bulkSetStatus('approved')">Approved</button>
+      <button class="bulk-btn bulk-btn-production" onclick="bulkSetStatus('production')">Sent to Production</button>
+      <button class="bulk-btn bulk-btn-complete" onclick="bulkSetStatus('complete')">Complete</button>
+      <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear</button>
+    </div>
+
+    <div class="select-all-row">
+      <input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)">
+      <label for="select-all-cb">Select all visible</label>
+    </div>
+  </div>
+
+  <div id="app">
+    <div class="loading-state"><div class="spinner"></div>Loading orders...</div>
+  </div>
+</div>
+
+<!-- Production note modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2>Sent to Production</h2>
+    <p id="modal-desc">Add a note for this order (optional)</p>
+    <textarea id="modal-note" placeholder="e.g. Sent 5/3/2026 — rush order"></textarea>
+    <div class="modal-actions">
+      <button class="modal-skip" onclick="modalSkip()">Skip Note</button>
+      <button class="modal-save" onclick="modalSave()">Save Note</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var SHEET_ID = '1ORRMZS2jhrCNrLNE-JQRsiyqn3h7sW3jQjtBfXzEXR4';
+var ordersData = [];
+var statusData = {};
+var notesData = {};
+var selectedIds = {};
+var activeFilter = 'all';
+var modalContext = null; // {ids: [], callback: fn}
+
+try { var s = localStorage.getItem('slc-minted-status'); if (s) statusData = JSON.parse(s); } catch(e) {}
+try { var n = localStorage.getItem('slc-minted-notes'); if (n) notesData = JSON.parse(n); } catch(e) {}
+
+function saveStatus() { try { localStorage.setItem('slc-minted-status', JSON.stringify(statusData)); } catch(e) {} }
+function saveNotes() { try { localStorage.setItem('slc-minted-notes', JSON.stringify(notesData)); } catch(e) {} }
+
+function setStatus(state) { document.getElementById('status-dot').className = 'status-dot ' + state; }
+
+function parseCSV(text) {
+  var rows = [], row = [], field = '', inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i], next = text[i+1];
+    if (inQuotes) {
+      if (ch === '"' && next === '"') { field += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { field += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { row.push(field); field = ''; }
+      else if (ch === '\n' || (ch === '\r' && next === '\n')) {
+        row.push(field); field = '';
+        rows.push(row); row = [];
+        if (ch === '\r') i++;
+      } else { field += ch; }
+    }
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function parseDate(str) {
+  if (!str) return 0;
+  var d = new Date(str);
+  return isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
+function formatDate(str) {
+  if (!str) return '';
+  var d = new Date(str);
+  if (isNaN(d.getTime())) return '';
+  return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+}
+
+function loadOrders() {
+  setStatus('loading');
+  selectedIds = {};
+  var app = document.getElementById('app');
+  document.getElementById('toolbar').style.display = 'none';
+  app.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading orders...</div>';
+  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
+  fetch(url).then(function(res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.text();
+  }).then(function(text) {
+    var rows = parseCSV(text);
+    ordersData = [];
+    rows.forEach(function(row, i) {
+      var name = (row[0] || '').trim();
+      if (!name || name === 'NAME') return;
+      var orderNum = (row[6] || '').trim();
+      var id = orderNum || ('row-' + i);
+      ordersData.push({
+        id: id,
+        name: name,
+        design: (row[1] || '').trim(),
+        orderLink: (row[2] || '').trim(),
+        pers: (row[3] || '').trim(),
+        filePath: (row[4] || '').trim(),
+        orderNum: orderNum,
+        orderDate: (row[7] || '').trim(),
+        msgLink: (row[9] || '').trim(),
+        rowIndex: i + 1
+      });
+    });
+
+    // Sort oldest first
+    ordersData.sort(function(a, b) { return parseDate(a.orderDate) - parseDate(b.orderDate); });
+
+    if (ordersData.length === 0) {
+      app.innerHTML = '<div class="empty">No orders found.</div>';
+      setStatus('error');
+      return;
+    }
+    setStatus('loaded');
+    renderOrders();
+    document.getElementById('toolbar').style.display = 'block';
+    updateBulkBar();
+  }).catch(function(e) {
+    setStatus('error');
+    app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
+  });
+}
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var STATUS_LABELS = { proof: 'Proof Sent', approved: 'Approved', production: 'In Production', complete: 'Complete' };
+var STATUS_BADGE = { proof: 'sb-proof', approved: 'sb-approved', production: 'sb-production', complete: 'sb-complete' };
+var CARD_CLASS = { proof: 's-proof', approved: 's-approved', production: 's-production', complete: 's-complete' };
+
+function renderOrders() {
+  var app = document.getElementById('app');
+  var html = '';
+  ordersData.forEach(function(o, i) {
+    var st = statusData[o.id] || '';
+    var note = notesData[o.id] || '';
+    var cardClass = 'order-card' + (st ? ' ' + CARD_CLASS[st] : '');
+    var isSelected = !!selectedIds[o.id];
+    if (isSelected) cardClass += ' selected';
+
+    html += '<div class="' + cardClass + '" id="card-' + i + '">';
+
+    // Header
+    html += '<div class="card-header">';
+    html += '<input type="checkbox" class="card-checkbox" id="cb-' + i + '" ' + (isSelected ? 'checked' : '') + ' onclick="toggleSelect(event,' + i + ')">';
+    html += '<span class="order-name" onclick="toggleCard(' + i + ')">' + esc(o.name) + '</span>';
+    html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
+    if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
+    if (st) html += '<span><span class="status-badge ' + STATUS_BADGE[st] + '">' + STATUS_LABELS[st] + '</span></span>';
+    if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
+    if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
+    html += '</div>';
+    html += '<span class="chevron" onclick="toggleCard(' + i + ')">▼</span>';
+    html += '</div>'; // card-header
+
+    // Body
+    html += '<div class="card-body">';
+
+    if (o.pers) {
+      html += '<div class="section-label">Personalization</div>';
+      html += '<div class="pers-box">' + esc(o.pers) + '</div>';
+    }
+
+    if (o.filePath) {
+      html += '<div class="section-label">File Path</div>';
+      html += '<div class="file-path">' + esc(o.filePath) + '</div>';
+    }
+
+    // Production note
+    html += '<div class="production-note-area">';
+    html += '<div class="production-note-display' + (note ? ' visible' : '') + '" id="note-display-' + i + '">Production note: ' + esc(note) + '</div>';
+    if (st === 'production') {
+      html += '<div class="note-edit-row">';
+      html += '<input class="note-input" id="note-input-' + i + '" placeholder="Add or edit production note..." value="' + esc(note) + '">';
+      html += '<button class="note-save-btn" onclick="saveNote(' + i + ')">Save</button>';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Action buttons
+    html += '<div class="actions">';
+    if (o.filePath) html += '<button class="btn btn-navy" id="cf-' + i + '" onclick="copyField(' + i + ',\'file\')">Copy File Path</button>';
+    if (o.pers) html += '<button class="btn btn-pink" id="cp-' + i + '" onclick="copyField(' + i + ',\'pers\')">Copy Personalization</button>';
+    if (o.orderLink) html += '<a class="btn btn-outline" href="' + esc(o.orderLink) + '" target="_blank">View Order</a>';
+    if (o.msgLink) html += '<a class="btn btn-outline" href="' + esc(o.msgLink) + '" target="_blank">Message Customer</a>';
+    html += '</div>';
+
+    // Status buttons
+    html += '<div class="section-label" style="margin-top:14px">Status</div>';
+    html += '<div class="status-actions">';
+    html += '<button class="s-btn s-btn-proof' + (st === 'proof' ? ' active' : '') + '" onclick="setOrderStatus(' + i + ',\'proof\')">Proof Sent</button>';
+    html += '<button class="s-btn s-btn-approved' + (st === 'approved' ? ' active' : '') + '" onclick="setOrderStatus(' + i + ',\'approved\')">Approved</button>';
+    html += '<button class="s-btn s-btn-production' + (st === 'production' ? ' active' : '') + '" onclick="setOrderStatus(' + i + ',\'production\')">Sent to Production</button>';
+    html += '<button class="s-btn s-btn-complete' + (st === 'complete' ? ' active' : '') + '" onclick="setOrderStatus(' + i + ',\'complete\')">Complete</button>';
+    if (st) html += '<button class="s-btn s-btn-none" onclick="setOrderStatus(' + i + ',\'\')">Clear</button>';
+    html += '</div>';
+
+    html += '</div>'; // card-body
+    html += '</div>'; // order-card
+  });
+
+  app.innerHTML = html || '<div class="empty">No orders found.</div>';
+  applyVisibility();
+}
+
+function toggleCard(i) {
+  document.getElementById('card-' + i).classList.toggle('open');
+}
+
+function toggleSelect(e, i) {
+  e.stopPropagation();
+  var o = ordersData[i];
+  if (selectedIds[o.id]) {
+    delete selectedIds[o.id];
+    document.getElementById('card-' + i).classList.remove('selected');
+  } else {
+    selectedIds[o.id] = true;
+    document.getElementById('card-' + i).classList.add('selected');
+  }
+  updateBulkBar();
+}
+
+function toggleSelectAll(checked) {
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (!card || card.classList.contains('hidden')) return;
+    var cb = document.getElementById('cb-' + i);
+    if (checked) {
+      selectedIds[o.id] = true;
+      card.classList.add('selected');
+      if (cb) cb.checked = true;
+    } else {
+      delete selectedIds[o.id];
+      card.classList.remove('selected');
+      if (cb) cb.checked = false;
+    }
+  });
+  updateBulkBar();
+}
+
+function clearSelection() {
+  selectedIds = {};
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (card) card.classList.remove('selected');
+    var cb = document.getElementById('cb-' + i);
+    if (cb) cb.checked = false;
+  });
+  var saCb = document.getElementById('select-all-cb');
+  if (saCb) saCb.checked = false;
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  var count = Object.keys(selectedIds).length;
+  var bar = document.getElementById('bulk-bar');
+  var countEl = document.getElementById('bulk-count');
+  if (count > 0) {
+    bar.classList.add('visible');
+    countEl.textContent = count + ' selected';
+  } else {
+    bar.classList.remove('visible');
+  }
+  updateCount();
+}
+
+function setOrderStatus(i, status) {
+  var o = ordersData[i];
+  if (status === 'production') {
+    openModal([o.id], function(note) {
+      if (note !== null) { notesData[o.id] = note; saveNotes(); }
+      applyStatus([o.id], 'production');
+      renderOrders();
+    });
+  } else {
+    applyStatus([o.id], status);
+    renderOrders();
+  }
+}
+
+function applyStatus(ids, status) {
+  ids.forEach(function(id) {
+    if (status === '') { delete statusData[id]; }
+    else { statusData[id] = status; }
+  });
+  saveStatus();
+}
+
+function bulkSetStatus(status) {
+  var ids = Object.keys(selectedIds);
+  if (ids.length === 0) return;
+  if (status === 'production') {
+    openModal(ids, function(note) {
+      ids.forEach(function(id) { if (note !== null && note !== '') { notesData[id] = note; } });
+      saveNotes();
+      applyStatus(ids, 'production');
+      clearSelection();
+      renderOrders();
+    });
+  } else {
+    applyStatus(ids, status);
+    clearSelection();
+    renderOrders();
+  }
+}
+
+function openModal(ids, callback) {
+  var names = ids.map(function(id) {
+    var o = ordersData.find(function(x) { return x.id === id; });
+    return o ? o.name : id;
+  });
+  var desc = ids.length === 1
+    ? 'Add a production note for ' + names[0] + ' (optional).'
+    : 'Add a production note for ' + ids.length + ' orders (optional). Same note will be applied to all.';
+  document.getElementById('modal-desc').textContent = desc;
+  document.getElementById('modal-note').value = ids.length === 1 ? (notesData[ids[0]] || '') : '';
+  modalContext = { ids: ids, callback: callback };
+  document.getElementById('modal-overlay').classList.add('visible');
+  setTimeout(function() { document.getElementById('modal-note').focus(); }, 50);
+}
+
+function modalSave() {
+  if (!modalContext) return;
+  var note = document.getElementById('modal-note').value.trim();
+  document.getElementById('modal-overlay').classList.remove('visible');
+  modalContext.callback(note);
+  modalContext = null;
+}
+
+function modalSkip() {
+  if (!modalContext) return;
+  document.getElementById('modal-overlay').classList.remove('visible');
+  modalContext.callback(null);
+  modalContext = null;
+}
+
+function saveNote(i) {
+  var o = ordersData[i];
+  var input = document.getElementById('note-input-' + i);
+  if (!input) return;
+  var note = input.value.trim();
+  notesData[o.id] = note;
+  saveNotes();
+  var display = document.getElementById('note-display-' + i);
+  if (display) {
+    display.textContent = 'Production note: ' + note;
+    display.classList.toggle('visible', !!note);
+  }
+  flashBtn('note-save-btn', input);
+}
+
+function flashBtn(cls, nearEl) {
+  if (!nearEl) return;
+  var btn = nearEl.parentElement ? nearEl.parentElement.querySelector('.' + cls) : null;
+  if (!btn) return;
+  var orig = btn.textContent;
+  btn.textContent = '✓ Saved';
+  setTimeout(function() { btn.textContent = orig; }, 1500);
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  var btn = document.getElementById('filter-' + f);
+  if (btn) btn.classList.add('active');
+  applyVisibility();
+}
+
+function applyVisibility() {
+  var counts = { all: 0, proof: 0, approved: 0, production: 0, complete: 0, pending: 0 };
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (!card) return;
+    var st = statusData[o.id] || '';
+    counts.all++;
+    if (st) counts[st] = (counts[st] || 0) + 1;
+    else counts.pending++;
+    var show = activeFilter === 'all'
+      || (activeFilter === 'pending' && !st)
+      || activeFilter === st;
+    card.classList.toggle('hidden', !show);
+  });
+  updateCount(counts);
+}
+
+function updateCount(counts) {
+  if (!counts) {
+    counts = { all: 0, proof: 0, approved: 0, production: 0, complete: 0, pending: 0 };
+    ordersData.forEach(function(o) {
+      var st = statusData[o.id] || '';
+      counts.all++;
+      if (st) counts[st] = (counts[st] || 0) + 1;
+      else counts.pending++;
+    });
+  }
+  var visible = activeFilter === 'all' ? counts.all
+    : activeFilter === 'pending' ? counts.pending
+    : (counts[activeFilter] || 0);
+  document.getElementById('order-count').textContent =
+    visible + ' order' + (visible !== 1 ? 's' : '') +
+    ' · ' + counts.pending + ' pending · ' + (counts.proof||0) + ' proof · ' +
+    (counts.approved||0) + ' approved · ' + (counts.production||0) + ' production · ' +
+    (counts.complete||0) + ' complete';
+}
+
+function copyField(i, field) {
+  var o = ordersData[i];
+  var text = field === 'file' ? o.filePath : o.pers;
+  var btnId = field === 'file' ? 'cf-' + i : 'cp-' + i;
+  if (!text) return;
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  ta.style.top = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  if (ok) { flashCopied(btnId); }
+  else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function() { flashCopied(btnId); }); }
+}
+
+function flashCopied(btnId) {
+  var btn = document.getElementById(btnId);
+  if (!btn) return;
+  var orig = btn.textContent;
+  btn.classList.add('copied');
+  btn.textContent = '✓ Copied!';
+  setTimeout(function() { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
+}
+
+loadOrders();
+</script>
+</body>
+</html>
