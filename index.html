@@ -590,7 +590,7 @@ function copySelectedLinks() {
   var lines = [];
   ids.forEach(function(id) {
     var o = ordersData.find(function(x) { return x.id === id; });
-    if (o && o.orderLink) lines.push(o.name + ': ' + o.orderLink);
+    if (o && o.orderLink) lines.push(o.orderLink);
   });
   if (!lines.length) return;
   var text = lines.join('\n');
