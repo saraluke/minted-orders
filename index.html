@@ -172,12 +172,18 @@
       <button id="refresh-btn2" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:20px;font-family:Montserrat,sans-serif;font-size:0.65rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;" onclick="loadOrders()">↺ Refresh</button>
     </div>
 
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <input id="note-search" type="text" placeholder="Filter by note text..." oninput="applyVisibility()" style="border:1.5px solid var(--border);border-radius:20px;padding:5px 14px;font-family:Montserrat,sans-serif;font-size:0.7rem;color:var(--text);width:240px;background:white;" />
+      <button onclick="clearNoteSearch()" style="background:transparent;border:none;color:var(--muted);font-size:0.75rem;cursor:pointer;font-family:Montserrat,sans-serif;padding:0 2px;" title="Clear note filter">✕</button>
+    </div>
+
     <div class="bulk-bar" id="bulk-bar">
       <span class="bulk-count" id="bulk-count">0 selected</span>
       <button class="bulk-btn bulk-btn-proof" onclick="bulkSetStatus('proof')">Proof Sent</button>
       <button class="bulk-btn bulk-btn-approved" onclick="bulkSetStatus('approved')">Approved</button>
       <button class="bulk-btn bulk-btn-production" onclick="bulkSetStatus('production')">Sent to Production</button>
       <button class="bulk-btn bulk-btn-complete" onclick="bulkSetStatus('complete')">Complete</button>
+      <button class="bulk-btn" id="copy-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks()">Copy Order Links</button>
       <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear</button>
     </div>
 
@@ -553,7 +559,14 @@ function setFilter(f) {
   applyVisibility();
 }
 
+function clearNoteSearch() {
+  var el = document.getElementById('note-search');
+  if (el) { el.value = ''; applyVisibility(); }
+}
+
 function applyVisibility() {
+  var noteEl = document.getElementById('note-search');
+  var noteQuery = noteEl ? noteEl.value.trim().toLowerCase() : '';
   var counts = { all: 0, proof: 0, approved: 0, production: 0, complete: 0, pending: 0 };
   ordersData.forEach(function(o, i) {
     var card = document.getElementById('card-' + i);
@@ -562,12 +575,43 @@ function applyVisibility() {
     counts.all++;
     if (st) counts[st] = (counts[st] || 0) + 1;
     else counts.pending++;
-    var show = activeFilter === 'all'
+    var matchesStatus = activeFilter === 'all'
       || (activeFilter === 'pending' && !st)
       || activeFilter === st;
-    card.classList.toggle('hidden', !show);
+    var note = (notesData[o.id] || '').toLowerCase();
+    var matchesNote = !noteQuery || note.indexOf(noteQuery) !== -1;
+    card.classList.toggle('hidden', !(matchesStatus && matchesNote));
   });
   updateCount(counts);
+}
+
+function copySelectedLinks() {
+  var ids = Object.keys(selectedIds);
+  var lines = [];
+  ids.forEach(function(id) {
+    var o = ordersData.find(function(x) { return x.id === id; });
+    if (o && o.orderLink) lines.push(o.name + ': ' + o.orderLink);
+  });
+  if (!lines.length) return;
+  var text = lines.join('\n');
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  ta.style.top = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  if (!ok && navigator.clipboard) { navigator.clipboard.writeText(text); }
+  var btn = document.getElementById('copy-links-btn');
+  if (btn) {
+    var orig = btn.textContent;
+    btn.textContent = '\u2713 ' + lines.length + ' Links Copied!';
+    setTimeout(function() { btn.textContent = orig; }, 2000);
+  }
 }
 
 function updateCount(counts) {
