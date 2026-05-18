@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="icon" type="image/png" href="/favicon.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sara Luke Creative — Minted Orders</title>
@@ -23,342 +24,616 @@
   .header-right { display: flex; align-items: center; gap: 12px; }
   #refresh-btn { background: transparent; border: 1px solid var(--pink-dark); color: var(--pink-light); padding: 6px 14px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
   #refresh-btn:hover { background: var(--pink-dark); color: white; }
-  .sync-status { font-size: 0.65rem; color: var(--pink-dark); letter-spacing: 0.06em; opacity: 0.8; }
-  .main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
-  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
-  .filter-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: white; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; color: var(--muted); transition: all 0.2s; }
-  .filter-btn.active { background: var(--navy); color: white; border-color: var(--navy); }
-  .select-all-wrap { margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 0.72rem; color: var(--muted); cursor: pointer; }
-  .select-all-wrap input[type=checkbox] { accent-color: var(--navy); width: 15px; height: 15px; cursor: pointer; }
-  .bulk-bar { background: var(--navy); color: white; padding: 12px 24px; display: flex; align-items: center; gap: 12px; font-size: 0.75rem; flex-wrap: wrap; margin-bottom: 18px; border-radius: 4px; }
-  .bulk-bar.hidden { display: none; }
-  .bulk-bar span { margin-right: auto; }
-  .bulk-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 5px 12px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
-  .bulk-btn:hover { background: rgba(255,255,255,0.25); }
-  .order-grid { display: grid; gap: 14px; }
-  .order-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: 6px; padding: 18px 20px; display: grid; grid-template-columns: 24px 1fr auto; gap: 14px; align-items: start; transition: border-color 0.2s, box-shadow 0.2s; }
-  .order-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
-  .order-card.status-proof { border-left-color: var(--status-proof); }
-  .order-card.status-approved { border-left-color: var(--status-approved); }
-  .order-card.status-production { border-left-color: var(--status-production); }
-  .order-card.status-complete { border-left-color: var(--status-complete); opacity: 0.7; }
-  .card-check { padding-top: 3px; }
-  .card-check input[type=checkbox] { accent-color: var(--navy); width: 15px; height: 15px; cursor: pointer; }
-  .card-body { min-width: 0; }
-  .order-meta { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-  .order-num { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--navy); font-weight: 600; }
-  .order-name { font-size: 0.78rem; color: var(--muted); }
-  .order-detail { font-size: 0.78rem; color: var(--text); margin-bottom: 4px; }
-  .order-detail strong { color: var(--navy); font-weight: 600; }
-  .note-display { font-size: 0.72rem; color: var(--tangerine); font-style: italic; margin-top: 6px; }
-  .card-actions { display: flex; flex-direction: column; gap: 7px; align-items: flex-end; }
-  .action-row { display: flex; gap: 6px; }
-  .btn { padding: 5px 11px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: 1px solid; transition: all 0.18s; white-space: nowrap; }
-  .btn-copy { background: white; border-color: var(--border); color: var(--navy); }
-  .btn-copy:hover { background: var(--navy); color: white; border-color: var(--navy); }
-  .btn-copy.copied { background: var(--green); color: white; border-color: var(--green); }
-  .btn-link { background: white; border-color: var(--border); color: var(--muted); text-decoration: none; display: inline-block; }
-  .btn-link:hover { border-color: var(--navy); color: var(--navy); }
-  .status-btns { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; margin-top: 4px; }
-  .sbtn { padding: 4px 9px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.6rem; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; border: 1px solid; transition: all 0.18s; }
-  .sbtn-proof { border-color: var(--status-proof); color: var(--status-proof); background: white; }
-  .sbtn-proof.active, .sbtn-proof:hover { background: var(--status-proof); color: white; }
-  .sbtn-approved { border-color: var(--status-approved); color: var(--status-approved); background: white; }
-  .sbtn-approved.active, .sbtn-approved:hover { background: var(--status-approved); color: white; }
-  .sbtn-production { border-color: var(--status-production); color: var(--status-production); background: white; }
-  .sbtn-production.active, .sbtn-production:hover { background: var(--status-production); color: white; }
-  .sbtn-complete { border-color: var(--status-complete); color: var(--status-complete); background: white; }
-  .sbtn-complete.active, .sbtn-complete:hover { background: var(--status-complete); color: white; }
-  .add-order-form { background: white; border: 1px dashed var(--border); border-radius: 6px; padding: 20px; margin-bottom: 18px; display: none; }
-  .add-order-form.open { display: block; }
-  .form-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 12px; }
-  .form-row input, .form-row textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.78rem; color: var(--text); }
-  .form-row textarea { min-height: 60px; resize: vertical; }
-  .form-actions { display: flex; gap: 8px; }
-  .btn-primary { background: var(--navy); color: white; border-color: var(--navy); padding: 8px 18px; font-size: 0.72rem; }
-  .btn-primary:hover { background: #2a3240; }
-  .btn-cancel { background: white; color: var(--muted); border-color: var(--border); padding: 8px 18px; font-size: 0.72rem; }
-  .add-btn { background: var(--pink-dark); color: white; border: none; padding: 8px 16px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
-  .add-btn:hover { background: #c05c74; }
-  .empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.85rem; }
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; }
-  .modal-overlay.hidden { display: none; }
-  .modal { background: white; border-radius: 6px; padding: 28px; width: 380px; max-width: 90vw; }
-  .modal h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; margin-bottom: 6px; color: var(--navy); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; display: inline-block; }
+  .status-dot.loaded { background: #7cb87c; }
+  .status-dot.loading { background: var(--tangerine); animation: pulse 1s infinite; }
+  .status-dot.error { background: #c97070; }
+  .sync-label { font-size: 0.65rem; color: var(--pink-dark); letter-spacing: 0.06em; opacity: 0.8; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .main { max-width: 960px; margin: 0 auto; padding: 28px 24px; }
+  .loading-state, .error-state { text-align: center; padding: 80px 24px; color: var(--muted); }
+  .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--pink-dark); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .order-count { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-right: auto; white-space: nowrap; }
+  .filter-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .filter-btn:hover { border-color: var(--navy); color: var(--navy); }
+  .filter-btn.active { background: var(--navy); border-color: var(--navy); color: white; }
+  .filter-btn.f-proof.active { background: var(--status-proof); border-color: var(--status-proof); }
+  .filter-btn.f-approved.active { background: var(--status-approved); border-color: var(--status-approved); }
+  .filter-btn.f-production.active { background: var(--status-production); border-color: var(--status-production); }
+  .filter-btn.f-complete.active { background: var(--status-complete); border-color: var(--status-complete); }
+
+  .bulk-bar { background: var(--navy); border-radius: 6px; padding: 10px 16px; margin-bottom: 14px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .bulk-bar.visible { display: flex; }
+  .bulk-count { font-size: 0.72rem; color: var(--pink-light); font-weight: 600; margin-right: auto; }
+  .bulk-btn { padding: 6px 14px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; }
+  .bulk-btn-proof { background: var(--status-proof); color: white; }
+  .bulk-btn-approved { background: var(--status-approved); color: white; }
+  .bulk-btn-production { background: var(--status-production); color: white; }
+  .bulk-btn-complete { background: var(--status-complete); color: white; }
+  .bulk-btn-clear { background: transparent; color: #aaa; border: 1px solid #555; }
+  .bulk-btn:hover { opacity: 0.85; }
+
+  .select-all-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.7rem; color: var(--muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .select-all-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
+
+  .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s; }
+  .order-card:hover { box-shadow: 0 3px 12px rgba(57,67,80,0.07); }
+  .order-card.hidden { display: none; }
+  .order-card.selected { border-color: var(--navy); box-shadow: 0 0 0 2px rgba(57,67,80,0.15); }
+  .order-card.s-proof { border-left: 4px solid var(--status-proof); }
+  .order-card.s-approved { border-left: 4px solid var(--status-approved); }
+  .order-card.s-production { border-left: 4px solid var(--status-production); }
+  .order-card.s-complete { border-left: 4px solid var(--status-complete); opacity: 0.5; }
+
+  .card-header { padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+  .card-header:hover { background: #fdf9fb; }
+  .card-checkbox { flex-shrink: 0; width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
+  .order-name { font-family: 'Playfair Display', serif; font-size: 0.95rem; font-weight: 600; color: var(--navy); min-width: 150px; }
+  .order-card.s-complete .order-name { text-decoration: line-through; color: var(--muted); }
+  .order-meta { font-size: 0.7rem; color: var(--muted); display: flex; gap: 12px; flex: 1; flex-wrap: wrap; align-items: center; }
+  .badge { font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .badge-design { background: #faeef2; color: var(--pink-dark); }
+  .status-badge { font-size: 0.6rem; padding: 2px 9px; border-radius: 20px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: white; }
+  .sb-proof { background: var(--status-proof); }
+  .sb-approved { background: var(--status-approved); }
+  .sb-production { background: var(--status-production); }
+  .sb-complete { background: var(--status-complete); }
+  .chevron { color: var(--muted); font-size: 0.7rem; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
+  .order-card.open .chevron { transform: rotate(180deg); }
+
+  .card-body { display: none; padding: 0 16px 16px; border-top: 1px solid var(--border); }
+  .order-card.open .card-body { display: block; }
+  .section-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; margin: 12px 0 5px; }
+  .pers-box { background: #f8f5f2; border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; font-size: 0.82rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; font-family: 'Montserrat', sans-serif; }
+  .file-path { font-size: 0.7rem; color: var(--muted); font-family: 'Courier New', monospace; word-break: break-all; background: #f8f5f2; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--border); }
+
+  .production-note-area { margin-top: 10px; }
+  .production-note-display { font-size: 0.78rem; color: var(--text); background: #fffbf0; border: 1px solid #e8dfc0; border-radius: 4px; padding: 8px 12px; font-style: italic; display: none; }
+  .production-note-display.visible { display: block; }
+  .note-edit-row { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+  .note-input { flex: 1; border: 1px solid var(--border); border-radius: 4px; padding: 7px 10px; font-family: 'Montserrat', sans-serif; font-size: 0.75rem; color: var(--text); background: white; }
+  .note-input:focus { outline: none; border-color: var(--status-production); }
+  .note-save-btn { background: var(--status-production); color: white; border: none; border-radius: 4px; padding: 7px 14px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+  .note-save-btn:hover { opacity: 0.85; }
+
+  .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; white-space: nowrap; }
+  .btn-navy { background: var(--navy); color: white; }
+  .btn-navy:hover { background: #2a3140; }
+  .btn-outline { background: white; color: var(--navy); border: 1.5px solid var(--navy); }
+  .btn-outline:hover { background: var(--navy); color: white; }
+  .btn-pink { background: var(--pink-dark); color: white; }
+  .btn-pink:hover { background: #c45e76; }
+  .btn.copied { background: var(--green) !important; border-color: var(--green) !important; color: white !important; }
+
+  .status-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .s-btn { padding: 6px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+  .s-btn-proof { background: white; color: var(--status-proof); border-color: var(--status-proof); }
+  .s-btn-proof.active, .s-btn-proof:hover { background: var(--status-proof); color: white; }
+  .s-btn-approved { background: white; color: var(--status-approved); border-color: var(--status-approved); }
+  .s-btn-approved.active, .s-btn-approved:hover { background: var(--status-approved); color: white; }
+  .s-btn-production { background: white; color: var(--status-production); border-color: var(--status-production); }
+  .s-btn-production.active, .s-btn-production:hover { background: var(--status-production); color: white; }
+  .s-btn-complete { background: white; color: var(--status-complete); border-color: var(--status-complete); }
+  .s-btn-complete.active, .s-btn-complete:hover { background: var(--status-complete); color: white; }
+  .s-btn-none { background: white; color: var(--muted); border-color: var(--border); }
+  .s-btn-none:hover { background: #f0eeec; }
+
+  .date-label { font-size: 0.65rem; }
+  .empty { text-align: center; padding: 60px; color: var(--muted); font-size: 0.85rem; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.visible { display: flex; }
+  .modal { background: white; border-radius: 8px; padding: 28px; width: 440px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--navy); margin-bottom: 6px; }
   .modal p { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; }
-  .modal textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.8rem; min-height: 80px; resize: vertical; margin-bottom: 14px; }
-  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
-  .loading { text-align: center; padding: 60px; color: var(--muted); font-size: 0.85rem; }
+  .modal textarea { width: 100%; border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; font-family: 'Montserrat', sans-serif; font-size: 0.8rem; color: var(--text); resize: vertical; min-height: 80px; }
+  .modal textarea:focus { outline: none; border-color: var(--status-production); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+  .modal-skip { background: white; color: var(--muted); border: 1px solid var(--border); padding: 8px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .modal-save { background: var(--status-production); color: white; border: none; padding: 8px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .modal-save:hover { opacity: 0.85; }
 </style>
 </head>
 <body>
 
 <header>
   <div>
-    <div class="subtitle">Sara Luke Creative</div>
-    <h1>Minted Orders</h1>
+    <h1>Sara Luke Creative</h1>
+    <div class="subtitle">Minted Orders</div>
   </div>
   <div class="header-right">
-    <span class="sync-status" id="sync-status">Loading...</span>
-    <button id="refresh-btn" onclick="loadOrders()">Refresh</button>
+    <span class="sync-label" id="sync-label"></span>
+    <span class="status-dot" id="status-dot"></span>
+    <button id="refresh-btn" onclick="loadOrders()">↺ Refresh</button>
   </div>
 </header>
 
 <div class="main">
-  <div style="display:flex; gap:10px; margin-bottom:18px; align-items:center;">
-    <button class="add-btn" onclick="toggleAddForm()">+ Add Order</button>
-  </div>
-
-  <div class="add-order-form" id="add-form">
-    <div class="form-row">
-      <input id="f-num" placeholder="Order # (e.g. M-12345)" />
-      <input id="f-name" placeholder="Customer Name" />
-      <input id="f-item" placeholder="Item / Product" />
-      <input id="f-personalization" placeholder="Personalization text" />
-      <input id="f-filepath" placeholder="File path (optional)" />
-      <input id="f-url" placeholder="Order URL (optional)" />
+  <div id="toolbar" style="display:none">
+    <div class="toolbar">
+      <span class="order-count" id="order-count"></span>
+      <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">All</button>
+      <button class="filter-btn f-proof" id="filter-proof" onclick="setFilter('proof')">Proof Sent</button>
+      <button class="filter-btn f-approved" id="filter-approved" onclick="setFilter('approved')">Approved</button>
+      <button class="filter-btn f-production" id="filter-production" onclick="setFilter('production')">In Production</button>
+      <button class="filter-btn f-complete" id="filter-complete" onclick="setFilter('complete')">Completed</button>
+      <button class="filter-btn" id="filter-pending" onclick="setFilter('pending')">No Status</button>
+      <button id="refresh-btn2" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:20px;font-family:Montserrat,sans-serif;font-size:0.65rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;" onclick="loadOrders()">↺ Refresh</button>
     </div>
-    <div class="form-actions">
-      <button class="btn btn-primary" onclick="addOrder()">Add Order</button>
-      <button class="btn btn-cancel" onclick="toggleAddForm()">Cancel</button>
+
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <input id="note-search" type="text" placeholder="Filter by note text..." oninput="applyVisibility()" style="border:1.5px solid var(--border);border-radius:20px;padding:5px 14px;font-family:Montserrat,sans-serif;font-size:0.7rem;color:var(--text);width:240px;background:white;" />
+      <button onclick="clearNoteSearch()" style="background:transparent;border:none;color:var(--muted);font-size:0.75rem;cursor:pointer;font-family:Montserrat,sans-serif;padding:0 2px;" title="Clear note filter">✕</button>
+    </div>
+
+    <div class="bulk-bar" id="bulk-bar">
+      <span class="bulk-count" id="bulk-count">0 selected</span>
+      <button class="bulk-btn bulk-btn-proof" onclick="bulkSetStatus('proof')">Proof Sent</button>
+      <button class="bulk-btn bulk-btn-approved" onclick="bulkSetStatus('approved')">Approved</button>
+      <button class="bulk-btn bulk-btn-production" onclick="bulkSetStatus('production')">Sent to Production</button>
+      <button class="bulk-btn bulk-btn-complete" onclick="bulkSetStatus('complete')">Complete</button>
+      <button class="bulk-btn" id="copy-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks()">Copy Order Links</button>
+      <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear</button>
+    </div>
+
+    <div class="select-all-row">
+      <input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)">
+      <label for="select-all-cb">Select all visible</label>
     </div>
   </div>
 
-  <div class="toolbar">
-    <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
-    <button class="filter-btn" data-filter="proof" onclick="setFilter('proof',this)">Proof Sent</button>
-    <button class="filter-btn" data-filter="approved" onclick="setFilter('approved',this)">Approved</button>
-    <button class="filter-btn" data-filter="production" onclick="setFilter('production',this)">In Production</button>
-    <button class="filter-btn" data-filter="complete" onclick="setFilter('complete',this)">Completed</button>
-    <button class="filter-btn" data-filter="none" onclick="setFilter('none',this)">No Status</button>
-    <div class="select-all-wrap">
-      <input type="checkbox" id="select-all" onchange="toggleSelectAll(this.checked)" />
-      <label for="select-all">Select all visible</label>
-    </div>
-  </div>
-
-  <div class="bulk-bar hidden" id="bulk-bar">
-    <span id="bulk-count">0 selected</span>
-    <button class="bulk-btn" onclick="bulkStatus('proof')">Proof Sent</button>
-    <button class="bulk-btn" onclick="bulkStatus('approved')">Approved</button>
-    <button class="bulk-btn" onclick="bulkStatus('production')">Sent to Production</button>
-    <button class="bulk-btn" onclick="bulkStatus('complete')">Complete</button>
-    <button class="bulk-btn" style="background:rgba(200,80,80,0.3)" onclick="clearSelected()">Clear Selection</button>
-  </div>
-
-  <div id="order-grid" class="order-grid">
-    <div class="loading">Loading your orders...</div>
+  <div id="app">
+    <div class="loading-state"><div class="spinner"></div>Loading orders...</div>
   </div>
 </div>
 
-<!-- Note modal -->
-<div class="modal-overlay hidden" id="note-modal">
+<div class="modal-overlay" id="modal-overlay">
   <div class="modal">
-    <h3>Add a Note</h3>
-    <p>Optional — add a note for this production batch (e.g. date sent, rush, special instructions).</p>
-    <textarea id="modal-note" placeholder="e.g. Sent to production May 17, rush order"></textarea>
-    <div class="modal-btns">
-      <button class="btn btn-cancel" onclick="closeModal(false)">Skip</button>
-      <button class="btn btn-primary" onclick="closeModal(true)">Save Note</button>
+    <h2>Sent to Production</h2>
+    <p id="modal-desc">Add a note for this order (optional)</p>
+    <textarea id="modal-note" placeholder="e.g. Sent 5/3/2026 — rush order"></textarea>
+    <div class="modal-actions">
+      <button class="modal-skip" onclick="modalSkip()">Skip Note</button>
+      <button class="modal-save" onclick="modalSave()">Save Note</button>
     </div>
   </div>
 </div>
 
 <script>
-const STORAGE_KEY = 'minted_orders_v2';
-let orders = [];
-let currentFilter = 'all';
-let pendingModalResolve = null;
+var SHEET_ID = '1ORRMZS2jhrCNrLNE-JQRsiyqn3h7sW3jQjtBfXzEXR4';
+var STATUS_KEY = 'slc_minted_status_v2';
+var NOTES_KEY  = 'slc_minted_notes_v2';
 
-// ── Persistent storage (cross-device via Claude storage API) ──────────────────
-async function saveOrders() {
-  try {
-    await window.storage.set(STORAGE_KEY, JSON.stringify(orders));
-    setSyncStatus('Saved');
-  } catch(e) {
-    setSyncStatus('Save failed');
-    console.error('Storage save error:', e);
-  }
-}
+var ordersData = [];
+var statusData = {};
+var notesData  = {};
+var selectedIds = {};
+var activeFilter = 'all';
+var modalContext = null;
 
-async function loadOrders() {
-  setSyncStatus('Syncing...');
-  try {
-    const result = await window.storage.get(STORAGE_KEY);
-    orders = result ? JSON.parse(result.value) : [];
-  } catch(e) {
-    orders = [];
-  }
-  setSyncStatus('Synced');
-  renderOrders();
-}
-
-function setSyncStatus(msg) {
-  const el = document.getElementById('sync-status');
+// ── Cross-device persistent storage ──────────────────────────────────────────
+function setSyncLabel(msg) {
+  var el = document.getElementById('sync-label');
   if (el) el.textContent = msg;
 }
 
-// ── Rendering ─────────────────────────────────────────────────────────────────
-function renderOrders() {
-  const grid = document.getElementById('order-grid');
-  let visible = orders;
-  if (currentFilter !== 'all') {
-    visible = orders.filter(o =>
-      currentFilter === 'none' ? !o.status : o.status === currentFilter
-    );
+async function loadPersistedData() {
+  setSyncLabel('Syncing...');
+  try {
+    var sr = await window.storage.get(STATUS_KEY);
+    statusData = sr ? JSON.parse(sr.value) : {};
+  } catch(e) { statusData = {}; }
+  try {
+    var nr = await window.storage.get(NOTES_KEY);
+    notesData = nr ? JSON.parse(nr.value) : {};
+  } catch(e) { notesData = {}; }
+  setSyncLabel('Synced');
+}
+
+async function saveStatus() {
+  try {
+    await window.storage.set(STATUS_KEY, JSON.stringify(statusData));
+    setSyncLabel('Saved');
+  } catch(e) { setSyncLabel('Save failed'); console.error(e); }
+}
+
+async function saveNotes() {
+  try {
+    await window.storage.set(NOTES_KEY, JSON.stringify(notesData));
+    setSyncLabel('Saved');
+  } catch(e) { setSyncLabel('Save failed'); console.error(e); }
+}
+
+// ── Sheet loading ─────────────────────────────────────────────────────────────
+function setDot(state) { document.getElementById('status-dot').className = 'status-dot ' + state; }
+
+function parseCSV(text) {
+  var rows = [], row = [], field = '', inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i], next = text[i+1];
+    if (inQuotes) {
+      if (ch === '"' && next === '"') { field += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { field += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { row.push(field); field = ''; }
+      else if (ch === '\n' || (ch === '\r' && next === '\n')) {
+        row.push(field); field = '';
+        rows.push(row); row = [];
+        if (ch === '\r') i++;
+      } else { field += ch; }
+    }
   }
-  if (!visible.length) {
-    grid.innerHTML = '<div class="empty">No orders here yet.</div>';
-    return;
-  }
-  grid.innerHTML = visible.map(o => cardHTML(o)).join('');
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows;
 }
 
-function cardHTML(o) {
-  const statusClass = o.status ? 'status-' + o.status : '';
-  const statusLabels = { proof: 'Proof Sent', approved: 'Approved', production: 'In Production', complete: 'Complete' };
-  return `
-  <div class="order-card ${statusClass}" id="card-${o.id}">
-    <div class="card-check">
-      <input type="checkbox" class="order-check" data-id="${o.id}" onchange="updateBulkBar()" />
-    </div>
-    <div class="card-body">
-      <div class="order-meta">
-        <span class="order-num">${o.num}</span>
-        <span class="order-name">${o.name || ''}</span>
-      </div>
-      ${o.item ? `<div class="order-detail"><strong>Item:</strong> ${o.item}</div>` : ''}
-      ${o.personalization ? `<div class="order-detail"><strong>Personalization:</strong> ${o.personalization}</div>` : ''}
-      ${o.filepath ? `<div class="order-detail"><strong>File Path:</strong> ${o.filepath}</div>` : ''}
-      ${o.note ? `<div class="note-display">Note: ${o.note}</div>` : ''}
-    </div>
-    <div class="card-actions">
-      <div class="action-row">
-        ${o.personalization ? `<button class="btn btn-copy" onclick="copyText('${escapeAttr(o.personalization)}', this)">Copy Personalization</button>` : ''}
-        ${o.filepath ? `<button class="btn btn-copy" onclick="copyText('${escapeAttr(o.filepath)}', this)">Copy File Path</button>` : ''}
-        ${o.url ? `<a class="btn btn-link" href="${o.url}" target="_blank">View Order</a>` : ''}
-      </div>
-      <div class="status-btns">
-        <button class="sbtn sbtn-proof ${o.status==='proof'?'active':''}" onclick="setStatus('${o.id}','proof')">Proof Sent</button>
-        <button class="sbtn sbtn-approved ${o.status==='approved'?'active':''}" onclick="setStatus('${o.id}','approved')">Approved</button>
-        <button class="sbtn sbtn-production ${o.status==='production'?'active':''}" onclick="setStatus('${o.id}','production')">Production</button>
-        <button class="sbtn sbtn-complete ${o.status==='complete'?'active':''}" onclick="setStatus('${o.id}','complete')">Complete</button>
-      </div>
-    </div>
-  </div>`;
+function parseDate(str) {
+  if (!str) return 0;
+  var d = new Date(str);
+  return isNaN(d.getTime()) ? 0 : d.getTime();
 }
 
-function escapeAttr(s) {
-  return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+function formatDate(str) {
+  if (!str) return '';
+  var d = new Date(str);
+  if (isNaN(d.getTime())) return '';
+  return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
 }
 
-// ── Status ────────────────────────────────────────────────────────────────────
-async function setStatus(id, status) {
-  if (status === 'production') {
-    const note = await promptNote();
-    const o = orders.find(x => x.id === id);
-    if (o) { o.status = status; if (note) o.note = note; }
-  } else {
-    const o = orders.find(x => x.id === id);
-    if (o) o.status = status;
-  }
-  await saveOrders();
-  renderOrders();
-}
+async function loadOrders() {
+  setDot('loading');
+  selectedIds = {};
+  var app = document.getElementById('app');
+  document.getElementById('toolbar').style.display = 'none';
+  app.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading orders...</div>';
 
-async function bulkStatus(status) {
-  const checked = [...document.querySelectorAll('.order-check:checked')].map(c => c.dataset.id);
-  if (!checked.length) return;
-  let note = '';
-  if (status === 'production') note = await promptNote();
-  checked.forEach(id => {
-    const o = orders.find(x => x.id === id);
-    if (o) { o.status = status; if (note) o.note = note; }
+  // Load status + notes from persistent storage first
+  await loadPersistedData();
+
+  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
+  fetch(url).then(function(res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.text();
+  }).then(function(text) {
+    var rows = parseCSV(text);
+    ordersData = [];
+    rows.forEach(function(row, i) {
+      var name = (row[0] || '').trim();
+      if (!name || name === 'NAME') return;
+      var orderNum = (row[6] || '').trim();
+      var id = orderNum || ('row-' + i);
+      ordersData.push({
+        id: id,
+        name: name,
+        design: (row[1] || '').trim(),
+        orderLink: (row[2] || '').trim(),
+        pers: (row[3] || '').trim(),
+        filePath: (row[4] || '').trim(),
+        orderNum: orderNum,
+        orderDate: (row[7] || '').trim(),
+        msgLink: (row[9] || '').trim(),
+        rowIndex: i + 1
+      });
+    });
+    ordersData.sort(function(a, b) { return parseDate(a.orderDate) - parseDate(b.orderDate); });
+    if (ordersData.length === 0) {
+      app.innerHTML = '<div class="empty">No orders found.</div>';
+      setDot('error');
+      return;
+    }
+    setDot('loaded');
+    renderOrders();
+    document.getElementById('toolbar').style.display = 'block';
+    updateBulkBar();
+  }).catch(function(e) {
+    setDot('error');
+    app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
   });
-  await saveOrders();
-  renderOrders();
+}
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var STATUS_LABELS = { proof: 'Proof Sent', approved: 'Approved', production: 'In Production', complete: 'Complete' };
+var STATUS_BADGE  = { proof: 'sb-proof', approved: 'sb-approved', production: 'sb-production', complete: 'sb-complete' };
+var CARD_CLASS    = { proof: 's-proof', approved: 's-approved', production: 's-production', complete: 's-complete' };
+
+function renderOrders() {
+  var app = document.getElementById('app');
+  var html = '';
+  ordersData.forEach(function(o, i) {
+    var st = statusData[o.id] || '';
+    var note = notesData[o.id] || '';
+    var cardClass = 'order-card' + (st ? ' ' + CARD_CLASS[st] : '');
+    if (selectedIds[o.id]) cardClass += ' selected';
+
+    html += '<div class="' + cardClass + '" id="card-' + i + '">';
+    html += '<div class="card-header">';
+    html += '<input type="checkbox" class="card-checkbox" id="cb-' + i + '" ' + (selectedIds[o.id] ? 'checked' : '') + ' onclick="toggleSelect(event,' + i + ')">';
+    html += '<span class="order-name" onclick="toggleCard(' + i + ')">' + esc(o.name) + '</span>';
+    html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
+    if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
+    if (st) html += '<span><span class="status-badge ' + STATUS_BADGE[st] + '">' + STATUS_LABELS[st] + '</span></span>';
+    if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
+    if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
+    html += '</div>';
+    html += '<span class="chevron" onclick="toggleCard(' + i + ')">▼</span>';
+    html += '</div>';
+
+    html += '<div class="card-body">';
+    if (o.pers) {
+      html += '<div class="section-label">Personalization</div>';
+      html += '<div class="pers-box">' + esc(o.pers) + '</div>';
+    }
+    if (o.filePath) {
+      html += '<div class="section-label">File Path</div>';
+      html += '<div class="file-path">' + esc(o.filePath) + '</div>';
+    }
+    html += '<div class="production-note-area">';
+    html += '<div class="production-note-display' + (note ? ' visible' : '') + '" id="note-display-' + i + '">Production note: ' + esc(note) + '</div>';
+    if (st === 'production') {
+      html += '<div class="note-edit-row">';
+      html += '<input class="note-input" id="note-input-' + i + '" placeholder="Add or edit production note..." value="' + esc(note) + '">';
+      html += '<button class="note-save-btn" onclick="saveNoteInline(' + i + ')">Save</button>';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="actions">';
+    if (o.filePath) html += '<button class="btn btn-navy" id="cf-' + i + '" onclick="copyField(' + i + ',\'file\')">Copy File Path</button>';
+    if (o.pers)     html += '<button class="btn btn-pink" id="cp-' + i + '" onclick="copyField(' + i + ',\'pers\')">Copy Personalization</button>';
+    if (o.orderLink) html += '<a class="btn btn-outline" href="' + esc(o.orderLink) + '" target="_blank">View Order</a>';
+    if (o.msgLink)   html += '<a class="btn btn-outline" href="' + esc(o.msgLink) + '" target="_blank">Message Customer</a>';
+    html += '</div>';
+
+    html += '<div class="section-label" style="margin-top:14px">Status</div>';
+    html += '<div class="status-actions">';
+    html += '<button class="s-btn s-btn-proof'      + (st==='proof'      ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'proof\')">Proof Sent</button>';
+    html += '<button class="s-btn s-btn-approved'   + (st==='approved'   ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'approved\')">Approved</button>';
+    html += '<button class="s-btn s-btn-production' + (st==='production' ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'production\')">Sent to Production</button>';
+    html += '<button class="s-btn s-btn-complete'   + (st==='complete'   ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'complete\')">Complete</button>';
+    if (st) html += '<button class="s-btn s-btn-none" onclick="setOrderStatus(' + i + ',\'\')">Clear</button>';
+    html += '</div>';
+
+    html += '</div></div>';
+  });
+  app.innerHTML = html || '<div class="empty">No orders found.</div>';
+  applyVisibility();
+}
+
+function toggleCard(i) { document.getElementById('card-' + i).classList.toggle('open'); }
+
+function toggleSelect(e, i) {
+  e.stopPropagation();
+  var o = ordersData[i];
+  if (selectedIds[o.id]) { delete selectedIds[o.id]; document.getElementById('card-' + i).classList.remove('selected'); }
+  else { selectedIds[o.id] = true; document.getElementById('card-' + i).classList.add('selected'); }
   updateBulkBar();
 }
 
-// ── Note modal ────────────────────────────────────────────────────────────────
-function promptNote() {
-  return new Promise(resolve => {
-    pendingModalResolve = resolve;
-    document.getElementById('modal-note').value = '';
-    document.getElementById('note-modal').classList.remove('hidden');
-  });
-}
-
-function closeModal(save) {
-  const note = save ? document.getElementById('modal-note').value.trim() : '';
-  document.getElementById('note-modal').classList.add('hidden');
-  if (pendingModalResolve) { pendingModalResolve(note); pendingModalResolve = null; }
-}
-
-// ── Add order ─────────────────────────────────────────────────────────────────
-function toggleAddForm() {
-  document.getElementById('add-form').classList.toggle('open');
-}
-
-async function addOrder() {
-  const num = document.getElementById('f-num').value.trim();
-  if (!num) { alert('Order number is required.'); return; }
-  const order = {
-    id: 'o' + Date.now(),
-    num,
-    name: document.getElementById('f-name').value.trim(),
-    item: document.getElementById('f-item').value.trim(),
-    personalization: document.getElementById('f-personalization').value.trim(),
-    filepath: document.getElementById('f-filepath').value.trim(),
-    url: document.getElementById('f-url').value.trim(),
-    status: '',
-    note: ''
-  };
-  orders.unshift(order);
-  await saveOrders();
-  renderOrders();
-  ['f-num','f-name','f-item','f-personalization','f-filepath','f-url'].forEach(id => document.getElementById(id).value = '');
-  toggleAddForm();
-}
-
-// ── Filter ────────────────────────────────────────────────────────────────────
-function setFilter(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderOrders();
-}
-
-// ── Select / bulk ─────────────────────────────────────────────────────────────
 function toggleSelectAll(checked) {
-  document.querySelectorAll('.order-check').forEach(c => c.checked = checked);
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (!card || card.classList.contains('hidden')) return;
+    var cb = document.getElementById('cb-' + i);
+    if (checked) { selectedIds[o.id] = true; card.classList.add('selected'); if (cb) cb.checked = true; }
+    else { delete selectedIds[o.id]; card.classList.remove('selected'); if (cb) cb.checked = false; }
+  });
+  updateBulkBar();
+}
+
+function clearSelection() {
+  selectedIds = {};
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (card) card.classList.remove('selected');
+    var cb = document.getElementById('cb-' + i);
+    if (cb) cb.checked = false;
+  });
+  var saCb = document.getElementById('select-all-cb');
+  if (saCb) saCb.checked = false;
   updateBulkBar();
 }
 
 function updateBulkBar() {
-  const count = document.querySelectorAll('.order-check:checked').length;
-  const bar = document.getElementById('bulk-bar');
-  document.getElementById('bulk-count').textContent = count + ' selected';
-  bar.classList.toggle('hidden', count === 0);
+  var count = Object.keys(selectedIds).length;
+  var bar = document.getElementById('bulk-bar');
+  var countEl = document.getElementById('bulk-count');
+  if (count > 0) { bar.classList.add('visible'); countEl.textContent = count + ' selected'; }
+  else { bar.classList.remove('visible'); }
+  updateCount();
 }
 
-function clearSelected() {
-  document.querySelectorAll('.order-check').forEach(c => c.checked = false);
-  document.getElementById('select-all').checked = false;
-  updateBulkBar();
+async function setOrderStatus(i, status) {
+  var o = ordersData[i];
+  if (status === 'production') {
+    openModal([o.id], async function(note) {
+      if (note !== null) { notesData[o.id] = note; await saveNotes(); }
+      await applyStatus([o.id], 'production');
+      renderOrders();
+    });
+  } else {
+    await applyStatus([o.id], status);
+    renderOrders();
+  }
 }
 
-// ── Copy ──────────────────────────────────────────────────────────────────────
-function copyText(text, btn) {
-  navigator.clipboard.writeText(text).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = 'Copied!';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
+async function applyStatus(ids, status) {
+  ids.forEach(function(id) {
+    if (status === '') { delete statusData[id]; }
+    else { statusData[id] = status; }
   });
+  await saveStatus();
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+async function bulkSetStatus(status) {
+  var ids = Object.keys(selectedIds);
+  if (ids.length === 0) return;
+  if (status === 'production') {
+    openModal(ids, async function(note) {
+      if (note !== null && note !== '') {
+        ids.forEach(function(id) { notesData[id] = note; });
+        await saveNotes();
+      }
+      await applyStatus(ids, 'production');
+      clearSelection();
+      renderOrders();
+    });
+  } else {
+    await applyStatus(ids, status);
+    clearSelection();
+    renderOrders();
+  }
+}
+
+function openModal(ids, callback) {
+  var names = ids.map(function(id) {
+    var o = ordersData.find(function(x) { return x.id === id; });
+    return o ? o.name : id;
+  });
+  var desc = ids.length === 1
+    ? 'Add a production note for ' + names[0] + ' (optional).'
+    : 'Add a production note for ' + ids.length + ' orders (optional). Same note will be applied to all.';
+  document.getElementById('modal-desc').textContent = desc;
+  document.getElementById('modal-note').value = ids.length === 1 ? (notesData[ids[0]] || '') : '';
+  modalContext = { ids: ids, callback: callback };
+  document.getElementById('modal-overlay').classList.add('visible');
+  setTimeout(function() { document.getElementById('modal-note').focus(); }, 50);
+}
+
+function modalSave() {
+  if (!modalContext) return;
+  var note = document.getElementById('modal-note').value.trim();
+  document.getElementById('modal-overlay').classList.remove('visible');
+  modalContext.callback(note);
+  modalContext = null;
+}
+
+function modalSkip() {
+  if (!modalContext) return;
+  document.getElementById('modal-overlay').classList.remove('visible');
+  modalContext.callback(null);
+  modalContext = null;
+}
+
+async function saveNoteInline(i) {
+  var o = ordersData[i];
+  var input = document.getElementById('note-input-' + i);
+  if (!input) return;
+  var note = input.value.trim();
+  notesData[o.id] = note;
+  await saveNotes();
+  var display = document.getElementById('note-display-' + i);
+  if (display) {
+    display.textContent = 'Production note: ' + note;
+    display.classList.toggle('visible', !!note);
+  }
+  var btn = input.parentElement ? input.parentElement.querySelector('.note-save-btn') : null;
+  if (btn) { var orig = btn.textContent; btn.textContent = '✓ Saved'; setTimeout(function() { btn.textContent = orig; }, 1500); }
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  var btn = document.getElementById('filter-' + f);
+  if (btn) btn.classList.add('active');
+  applyVisibility();
+}
+
+function clearNoteSearch() {
+  var el = document.getElementById('note-search');
+  if (el) { el.value = ''; applyVisibility(); }
+}
+
+function applyVisibility() {
+  var noteEl = document.getElementById('note-search');
+  var noteQuery = noteEl ? noteEl.value.trim().toLowerCase() : '';
+  var counts = { all: 0, proof: 0, approved: 0, production: 0, complete: 0, pending: 0 };
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (!card) return;
+    var st = statusData[o.id] || '';
+    counts.all++;
+    if (st) counts[st] = (counts[st] || 0) + 1;
+    else counts.pending++;
+    var matchesStatus = activeFilter === 'all' || (activeFilter === 'pending' && !st) || activeFilter === st;
+    var note = (notesData[o.id] || '').toLowerCase();
+    var matchesNote = !noteQuery || note.indexOf(noteQuery) !== -1;
+    card.classList.toggle('hidden', !(matchesStatus && matchesNote));
+  });
+  updateCount(counts);
+}
+
+function copySelectedLinks() {
+  var ids = Object.keys(selectedIds);
+  var lines = [];
+  ids.forEach(function(id) {
+    var o = ordersData.find(function(x) { return x.id === id; });
+    if (o && o.orderLink) lines.push(o.orderLink);
+  });
+  if (!lines.length) return;
+  var text = lines.join('\n');
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  if (!ok && navigator.clipboard) { navigator.clipboard.writeText(text); }
+  var btn = document.getElementById('copy-links-btn');
+  if (btn) { var orig = btn.textContent; btn.textContent = '✓ ' + lines.length + ' Links Copied!'; setTimeout(function() { btn.textContent = orig; }, 2000); }
+}
+
+function updateCount(counts) {
+  if (!counts) {
+    counts = { all: 0, proof: 0, approved: 0, production: 0, complete: 0, pending: 0 };
+    ordersData.forEach(function(o) {
+      var st = statusData[o.id] || '';
+      counts.all++;
+      if (st) counts[st] = (counts[st] || 0) + 1;
+      else counts.pending++;
+    });
+  }
+  var visible = activeFilter === 'all' ? counts.all : activeFilter === 'pending' ? counts.pending : (counts[activeFilter] || 0);
+  document.getElementById('order-count').textContent =
+    visible + ' order' + (visible !== 1 ? 's' : '') +
+    ' · ' + counts.pending + ' pending · ' + (counts.proof||0) + ' proof · ' +
+    (counts.approved||0) + ' approved · ' + (counts.production||0) + ' production · ' +
+    (counts.complete||0) + ' complete';
+}
+
+function copyField(i, field) {
+  var o = ordersData[i];
+  var text = field === 'file' ? o.filePath : o.pers;
+  var btnId = field === 'file' ? 'cf-' + i : 'cp-' + i;
+  if (!text) return;
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  if (ok) { flashCopied(btnId); }
+  else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function() { flashCopied(btnId); }); }
+}
+
+function flashCopied(btnId) {
+  var btn = document.getElementById(btnId);
+  if (!btn) return;
+  var orig = btn.textContent;
+  btn.classList.add('copied');
+  btn.textContent = '✓ Copied!';
+  setTimeout(function() { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
+}
+
 loadOrders();
 </script>
 </body>
