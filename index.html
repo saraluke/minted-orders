@@ -42,6 +42,7 @@
   .filter-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .filter-btn:hover { border-color: var(--navy); color: var(--navy); }
   .filter-btn.active { background: var(--navy); border-color: var(--navy); color: white; }
+  .filter-btn.f-proof-complete.active { background: #a0b8a0; border-color: #a0b8a0; color: white; }
   .filter-btn.f-proof.active { background: var(--status-proof); border-color: var(--status-proof); }
   .filter-btn.f-approved.active { background: var(--status-approved); border-color: var(--status-approved); }
   .filter-btn.f-production.active { background: var(--status-production); border-color: var(--status-production); }
@@ -71,6 +72,7 @@
   .order-card.hidden { display: none; }
   .order-card.selected { border-color: var(--navy); box-shadow: 0 0 0 2px rgba(57,67,80,0.15); }
   .order-card.s-proof { border-left: 4px solid var(--status-proof); }
+  .order-card.s-proof-complete { border-left: 4px solid #a0b8a0; }
   .order-card.s-approved { border-left: 4px solid var(--status-approved); }
   .order-card.s-production { border-left: 4px solid var(--status-production); }
   .order-card.s-complete { border-left: 4px solid var(--status-complete); opacity: 0.5; }
@@ -85,6 +87,7 @@
   .badge-design { background: #faeef2; color: var(--pink-dark); }
   .status-badge { font-size: 0.6rem; padding: 2px 9px; border-radius: 20px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: white; }
   .sb-proof { background: var(--status-proof); }
+  .sb-proof-complete { background: #a0b8a0; }
   .sb-approved { background: var(--status-approved); }
   .sb-production { background: var(--status-production); }
   .sb-complete { background: var(--status-complete); }
@@ -120,6 +123,8 @@
   .s-btn { padding: 6px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
   .s-btn-proof { background: white; color: var(--status-proof); border-color: var(--status-proof); }
   .s-btn-proof.active, .s-btn-proof:hover { background: var(--status-proof); color: white; }
+  .s-btn-proof-complete { background: white; color: #6e8f6e; border-color: #a0b8a0; }
+  .s-btn-proof-complete.active, .s-btn-proof-complete:hover { background: #a0b8a0; color: white; }
   .s-btn-approved { background: white; color: var(--status-approved); border-color: var(--status-approved); }
   .s-btn-approved.active, .s-btn-approved:hover { background: var(--status-approved); color: white; }
   .s-btn-production { background: white; color: var(--status-production); border-color: var(--status-production); }
@@ -171,6 +176,7 @@
     <!-- Row 2: filter buttons -->
     <div class="toolbar-filters">
       <button class="filter-btn" id="filter-all" onclick="setFilter('all')">All</button>
+      <button class="filter-btn f-proof-complete" id="filter-proof-complete" onclick="setFilter('proof-complete')">Proof Complete</button>
       <button class="filter-btn f-proof" id="filter-proof" onclick="setFilter('proof')">Proof Sent</button>
       <button class="filter-btn f-approved" id="filter-approved" onclick="setFilter('approved')">Approved</button>
       <button class="filter-btn f-production" id="filter-production" onclick="setFilter('production')">In Production</button>
@@ -193,6 +199,7 @@
     <div class="bulk-bar" id="bulk-bar">
       <span class="bulk-count" id="bulk-count">0 selected</span>
       <button class="bulk-btn bulk-btn-proof" onclick="bulkSetStatus('proof')">Proof Sent</button>
+      <button class="bulk-btn" style="background:#a0b8a0;color:white;" onclick="bulkSetStatus('proof-complete')">Proof Complete</button>
       <button class="bulk-btn bulk-btn-approved" onclick="bulkSetStatus('approved')">Approved</button>
       <button class="bulk-btn bulk-btn-production" onclick="bulkSetStatus('production')">Sent to Production</button>
       <button class="bulk-btn bulk-btn-complete" onclick="bulkSetStatus('complete')">Complete</button>
@@ -397,9 +404,9 @@ function esc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-var STATUS_LABELS = { proof: 'Proof Sent', approved: 'Approved', production: 'In Production', complete: 'Complete' };
-var STATUS_BADGE  = { proof: 'sb-proof', approved: 'sb-approved', production: 'sb-production', complete: 'sb-complete' };
-var CARD_CLASS    = { proof: 's-proof', approved: 's-approved', production: 's-production', complete: 's-complete' };
+var STATUS_LABELS = { proof: 'Proof Sent', 'proof-complete': 'Proof Complete', approved: 'Approved', production: 'In Production', complete: 'Complete' };
+var STATUS_BADGE  = { proof: 'sb-proof', 'proof-complete': 'sb-proof-complete', approved: 'sb-approved', production: 'sb-production', complete: 'sb-complete' };
+var CARD_CLASS    = { proof: 's-proof', 'proof-complete': 's-proof-complete', approved: 's-approved', production: 's-production', complete: 's-complete' };
 
 function renderOrders() {
   var app = document.getElementById('app');
@@ -451,8 +458,9 @@ function renderOrders() {
 
     html += '<div class="section-label" style="margin-top:14px">Status</div>';
     html += '<div class="status-actions">';
-    html += '<button class="s-btn s-btn-proof'      + (st==='proof'      ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'proof\')">Proof Sent</button>';
-    html += '<button class="s-btn s-btn-approved'   + (st==='approved'   ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'approved\')">Approved</button>';
+    html += '<button class="s-btn s-btn-proof'          + (st==='proof'          ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'proof\')">Proof Sent</button>';
+    html += '<button class="s-btn s-btn-proof-complete' + (st==='proof-complete' ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'proof-complete\')">Proof Complete</button>';
+    html += '<button class="s-btn s-btn-approved'       + (st==='approved'       ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'approved\')">Approved</button>';
     html += '<button class="s-btn s-btn-production' + (st==='production' ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'production\')">Sent to Production</button>';
     html += '<button class="s-btn s-btn-complete'   + (st==='complete'   ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'complete\')">Complete</button>';
     if (st) html += '<button class="s-btn s-btn-none" onclick="setOrderStatus(' + i + ',\'\')">Clear</button>';
@@ -614,7 +622,7 @@ function clearNoteSearch() {
 function applyVisibility() {
   var noteEl = document.getElementById('note-search');
   var noteQuery = noteEl ? noteEl.value.trim().toLowerCase() : '';
-  var counts = { all: 0, proof: 0, approved: 0, production: 0, complete: 0, pending: 0 };
+  var counts = { all: 0, proof: 0, 'proof-complete': 0, approved: 0, production: 0, complete: 0, pending: 0 };
   ordersData.forEach(function(o, i) {
     var card = document.getElementById('card-' + i);
     if (!card) return;
@@ -663,7 +671,8 @@ function updateCount(counts) {
   var visible = activeFilter === 'all' ? counts.all : activeFilter === 'pending' ? counts.pending : (counts[activeFilter] || 0);
   document.getElementById('order-count').textContent =
     visible + ' order' + (visible !== 1 ? 's' : '') +
-    ' · ' + counts.pending + ' pending · ' + (counts.proof||0) + ' proof · ' +
+    ' · ' + counts.pending + ' pending · ' + (counts.proof||0) + ' proof sent · ' +
+    (counts['proof-complete']||0) + ' proof complete · ' +
     (counts.approved||0) + ' approved · ' + (counts.production||0) + ' production · ' +
     (counts.complete||0) + ' complete';
 }
