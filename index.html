@@ -28,6 +28,7 @@
   .status-dot.loaded { background: #7cb87c; }
   .status-dot.loading { background: var(--tangerine); animation: pulse 1s infinite; }
   .status-dot.error { background: #c97070; }
+  .sync-label { font-size: 0.65rem; color: var(--pink-dark); letter-spacing: 0.06em; opacity: 0.8; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
   .main { max-width: 960px; margin: 0 auto; padding: 28px 24px; }
@@ -35,11 +36,8 @@
   .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--pink-dark); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* TOP ROW: count + refresh only */
   .toolbar-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   .order-count { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-right: auto; white-space: nowrap; }
-
-  /* SECOND ROW: filter buttons */
   .toolbar-filters { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
   .filter-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .filter-btn:hover { border-color: var(--navy); color: var(--navy); }
@@ -50,12 +48,10 @@
   .filter-btn.f-complete.active { background: var(--status-complete); border-color: var(--status-complete); }
   .filter-btn.f-pending.active { background: var(--navy); border-color: var(--navy); }
 
-  /* SELECTION COUNT BANNER */
-  .selection-banner { background: #eef1f5; border: 1px solid #c8d0db; border-radius: 6px; padding: 9px 16px; margin-bottom: 12px; display: none; align-items: center; gap: 10px; }
+  .selection-banner { background: #eef1f5; border: 1px solid #c8d0db; border-radius: 6px; padding: 9px 16px; margin-bottom: 12px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
   .selection-banner.visible { display: flex; }
-  .selection-banner-count { font-size: 0.78rem; font-weight: 600; color: var(--navy); letter-spacing: 0.04em; }
+  .selection-banner-count { font-size: 0.78rem; font-weight: 600; color: var(--navy); margin-right: auto; }
 
-  /* BULK BAR */
   .bulk-bar { background: var(--navy); border-radius: 6px; padding: 10px 16px; margin-bottom: 14px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
   .bulk-bar.visible { display: flex; }
   .bulk-count { font-size: 0.72rem; color: var(--pink-light); font-weight: 600; margin-right: auto; }
@@ -67,11 +63,9 @@
   .bulk-btn-clear { background: transparent; color: #aaa; border: 1px solid #555; }
   .bulk-btn:hover { opacity: 0.85; }
 
-  /* SELECT ALL ROW */
   .select-all-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.7rem; color: var(--muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
   .select-all-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
 
-  /* ORDER CARDS */
   .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s; }
   .order-card:hover { box-shadow: 0 3px 12px rgba(57,67,80,0.07); }
   .order-card.hidden { display: none; }
@@ -159,6 +153,7 @@
     <div class="subtitle">Minted Orders</div>
   </div>
   <div class="header-right">
+    <span class="sync-label" id="sync-label"></span>
     <span class="status-dot" id="status-dot"></span>
     <button id="refresh-btn" onclick="loadOrders()">↺ Refresh</button>
   </div>
@@ -218,7 +213,6 @@
   </div>
 </div>
 
-<!-- Production note modal -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
     <h2>Sent to Production</h2>
@@ -232,20 +226,86 @@
 </div>
 
 <script>
-var SHEET_ID = '1ORRMZS2jhrCNrLNE-JQRsiyqn3h7sW3jQjtBfXzEXR4';
-var ordersData = [];
-var statusData = {};
-var notesData = {};
+var SHEET_ID    = '1ORRMZS2jhrCNrLNE-JQRsiyqn3h7sW3jQjtBfXzEXR4';
+var SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbzrA8RXixGE24MC_CTo-1t5Ppria5zhfZB8eGM6AeKGgkvgGIyXvvXBAEdM9-MQbG42/exec';
+var STATUS_KEY  = 'slc_minted_status';
+var NOTES_KEY   = 'slc_minted_notes';
+
+var ordersData  = [];
+var statusData  = {};
+var notesData   = {};
 var selectedIds = {};
-var activeFilter = 'pending'; // default to No Status
+var activeFilter = 'pending';
 var modalContext = null;
 
-try { var s = localStorage.getItem('slc-minted-status'); if (s) statusData = JSON.parse(s); } catch(e) {}
-try { var n = localStorage.getItem('slc-minted-notes'); if (n) notesData = JSON.parse(n); } catch(e) {}
+// ── Sync helpers ──────────────────────────────────────────────────────────────
+function setSyncLabel(msg) {
+  var el = document.getElementById('sync-label');
+  if (el) el.textContent = msg;
+}
 
-function saveStatus() { try { localStorage.setItem('slc-minted-status', JSON.stringify(statusData)); } catch(e) {} }
-function saveNotes()  { try { localStorage.setItem('slc-minted-notes',  JSON.stringify(notesData));  } catch(e) {} }
+function scriptURL(params) {
+  var parts = [SCRIPT_URL];
+  var first = true;
+  for (var k in params) {
+    parts.push((first ? '?' : '&') + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+    first = false;
+  }
+  return parts.join('');
+}
 
+function loadPersistedData(callback) {
+  setSyncLabel('Syncing...');
+  var statusDone = false, notesDone = false;
+
+  function checkDone() {
+    if (statusDone && notesDone) { setSyncLabel('Synced'); callback(); }
+  }
+
+  fetch(scriptURL({ action: 'get', key: STATUS_KEY }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.value) { try { statusData = JSON.parse(data.value); } catch(e) { statusData = {}; } }
+      else { statusData = {}; }
+      statusDone = true; checkDone();
+    }).catch(function() {
+      try { var s = localStorage.getItem(STATUS_KEY); if (s) statusData = JSON.parse(s); } catch(e) {}
+      statusDone = true; checkDone();
+    });
+
+  fetch(scriptURL({ action: 'get', key: NOTES_KEY }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.value) { try { notesData = JSON.parse(data.value); } catch(e) { notesData = {}; } }
+      else { notesData = {}; }
+      notesDone = true; checkDone();
+    }).catch(function() {
+      try { var n = localStorage.getItem(NOTES_KEY); if (n) notesData = JSON.parse(n); } catch(e) {}
+      notesDone = true; checkDone();
+    });
+}
+
+function saveStatus() {
+  var val = JSON.stringify(statusData);
+  try { localStorage.setItem(STATUS_KEY, val); } catch(e) {}
+  setSyncLabel('Saving...');
+  fetch(scriptURL({ action: 'set', key: STATUS_KEY, value: val }))
+    .then(function(r) { return r.json(); })
+    .then(function() { setSyncLabel('Saved'); })
+    .catch(function() { setSyncLabel('Saved locally'); });
+}
+
+function saveNotes() {
+  var val = JSON.stringify(notesData);
+  try { localStorage.setItem(NOTES_KEY, val); } catch(e) {}
+  setSyncLabel('Saving...');
+  fetch(scriptURL({ action: 'set', key: NOTES_KEY, value: val }))
+    .then(function(r) { return r.json(); })
+    .then(function() { setSyncLabel('Saved'); })
+    .catch(function() { setSyncLabel('Saved locally'); });
+}
+
+// ── Sheet loading ─────────────────────────────────────────────────────────────
 function setDot(state) { document.getElementById('status-dot').className = 'status-dot ' + state; }
 
 function parseCSV(text) {
@@ -289,44 +349,47 @@ function loadOrders() {
   var app = document.getElementById('app');
   document.getElementById('toolbar').style.display = 'none';
   app.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading orders...</div>';
-  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
-  fetch(url).then(function(res) {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.text();
-  }).then(function(text) {
-    var rows = parseCSV(text);
-    ordersData = [];
-    rows.forEach(function(row, i) {
-      var name = (row[0] || '').trim();
-      if (!name || name === 'NAME') return;
-      var orderNum = (row[6] || '').trim();
-      var id = orderNum || ('row-' + i);
-      ordersData.push({
-        id: id,
-        name: name,
-        design: (row[1] || '').trim(),
-        orderLink: (row[2] || '').trim(),
-        pers: (row[3] || '').trim(),
-        filePath: (row[4] || '').trim(),
-        orderNum: orderNum,
-        orderDate: (row[7] || '').trim(),
-        msgLink: (row[9] || '').trim(),
-        rowIndex: i + 1
+
+  loadPersistedData(function() {
+    var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
+    fetch(url).then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    }).then(function(text) {
+      var rows = parseCSV(text);
+      ordersData = [];
+      rows.forEach(function(row, i) {
+        var name = (row[0] || '').trim();
+        if (!name || name === 'NAME') return;
+        var orderNum = (row[6] || '').trim();
+        var id = orderNum || ('row-' + i);
+        ordersData.push({
+          id: id,
+          name: name,
+          design: (row[1] || '').trim(),
+          orderLink: (row[2] || '').trim(),
+          pers: (row[3] || '').trim(),
+          filePath: (row[4] || '').trim(),
+          orderNum: orderNum,
+          orderDate: (row[7] || '').trim(),
+          msgLink: (row[9] || '').trim(),
+          rowIndex: i + 1
+        });
       });
-    });
-    ordersData.sort(function(a, b) { return parseDate(a.orderDate) - parseDate(b.orderDate); });
-    if (ordersData.length === 0) {
-      app.innerHTML = '<div class="empty">No orders found.</div>';
+      ordersData.sort(function(a, b) { return parseDate(a.orderDate) - parseDate(b.orderDate); });
+      if (ordersData.length === 0) {
+        app.innerHTML = '<div class="empty">No orders found.</div>';
+        setDot('error');
+        return;
+      }
+      setDot('loaded');
+      renderOrders();
+      document.getElementById('toolbar').style.display = 'block';
+      updateSelectionUI();
+    }).catch(function(e) {
       setDot('error');
-      return;
-    }
-    setDot('loaded');
-    renderOrders();
-    document.getElementById('toolbar').style.display = 'block';
-    updateSelectionUI();
-  }).catch(function(e) {
-    setDot('error');
-    app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
+      app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
+    });
   });
 }
 
@@ -437,27 +500,19 @@ function clearSelection() {
 
 function updateSelectionUI() {
   var count = Object.keys(selectedIds).length;
-
-  // Selection count banner at top
   var banner = document.getElementById('selection-banner');
   var bannerCount = document.getElementById('selection-banner-count');
-  if (count > 0) {
-    banner.classList.add('visible');
-    bannerCount.textContent = count + ' order' + (count !== 1 ? 's' : '') + ' selected';
-  } else {
-    banner.classList.remove('visible');
-  }
-
-  // Bulk action bar
   var bar = document.getElementById('bulk-bar');
   var bulkCount = document.getElementById('bulk-count');
   if (count > 0) {
+    banner.classList.add('visible');
+    bannerCount.textContent = count + ' order' + (count !== 1 ? 's' : '') + ' selected';
     bar.classList.add('visible');
     bulkCount.textContent = count + ' selected';
   } else {
+    banner.classList.remove('visible');
     bar.classList.remove('visible');
   }
-
   updateCount();
 }
 
@@ -488,8 +543,7 @@ function bulkSetStatus(status) {
   if (ids.length === 0) return;
   if (status === 'production') {
     openModal(ids, function(note) {
-      ids.forEach(function(id) { if (note !== null && note !== '') { notesData[id] = note; } });
-      saveNotes();
+      if (note !== null && note !== '') { ids.forEach(function(id) { notesData[id] = note; }); saveNotes(); }
       applyStatus(ids, 'production');
       clearSelection();
       renderOrders();
@@ -508,7 +562,7 @@ function openModal(ids, callback) {
   });
   var desc = ids.length === 1
     ? 'Add a production note for ' + names[0] + ' (optional).'
-    : 'Add a production note for ' + ids.length + ' orders (optional). Same note will be applied to all.';
+    : 'Add a production note for ' + ids.length + ' orders (optional). Same note applied to all.';
   document.getElementById('modal-desc').textContent = desc;
   document.getElementById('modal-note').value = ids.length === 1 ? (notesData[ids[0]] || '') : '';
   modalContext = { ids: ids, callback: callback };
@@ -539,10 +593,7 @@ function saveNoteInline(i) {
   notesData[o.id] = note;
   saveNotes();
   var display = document.getElementById('note-display-' + i);
-  if (display) {
-    display.textContent = 'Production note: ' + note;
-    display.classList.toggle('visible', !!note);
-  }
+  if (display) { display.textContent = 'Production note: ' + note; display.classList.toggle('visible', !!note); }
   var btn = input.parentElement ? input.parentElement.querySelector('.note-save-btn') : null;
   if (btn) { var orig = btn.textContent; btn.textContent = '✓ Saved'; setTimeout(function() { btn.textContent = orig; }, 1500); }
 }
@@ -571,9 +622,7 @@ function applyVisibility() {
     counts.all++;
     if (st) counts[st] = (counts[st] || 0) + 1;
     else counts.pending++;
-    var matchesStatus = activeFilter === 'all'
-      || (activeFilter === 'pending' && !st)
-      || activeFilter === st;
+    var matchesStatus = activeFilter === 'all' || (activeFilter === 'pending' && !st) || activeFilter === st;
     var note = (notesData[o.id] || '').toLowerCase();
     var matchesNote = !noteQuery || note.indexOf(noteQuery) !== -1;
     card.classList.toggle('hidden', !(matchesStatus && matchesNote));
