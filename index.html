@@ -175,13 +175,13 @@
 
     <!-- Row 2: filter buttons -->
     <div class="toolbar-filters">
-      <button class="filter-btn" id="filter-all" onclick="setFilter('all')">All</button>
-      <button class="filter-btn f-proof-complete" id="filter-proof-complete" onclick="setFilter('proof-complete')">Proof Complete</button>
+      <button class="filter-btn f-pending active" id="filter-pending" onclick="setFilter('pending')">No Status</button>
+      <button class="filter-btn f-proof-complete" id="filter-proof-complete" onclick="setFilter('proof-complete')">Proof Ready</button>
       <button class="filter-btn f-proof" id="filter-proof" onclick="setFilter('proof')">Proof Sent</button>
       <button class="filter-btn f-approved" id="filter-approved" onclick="setFilter('approved')">Approved</button>
       <button class="filter-btn f-production" id="filter-production" onclick="setFilter('production')">In Production</button>
       <button class="filter-btn f-complete" id="filter-complete" onclick="setFilter('complete')">Completed</button>
-      <button class="filter-btn f-pending active" id="filter-pending" onclick="setFilter('pending')">No Status</button>
+      <button class="filter-btn" id="filter-all" onclick="setFilter('all')">All</button>
     </div>
 
     <!-- Note search -->
@@ -198,8 +198,8 @@
     <!-- Bulk action bar -->
     <div class="bulk-bar" id="bulk-bar">
       <span class="bulk-count" id="bulk-count">0 selected</span>
+      <button class="bulk-btn" style="background:#a0b8a0;color:white;" onclick="bulkSetStatus('proof-complete')">Proof Ready</button>
       <button class="bulk-btn bulk-btn-proof" onclick="bulkSetStatus('proof')">Proof Sent</button>
-      <button class="bulk-btn" style="background:#a0b8a0;color:white;" onclick="bulkSetStatus('proof-complete')">Proof Complete</button>
       <button class="bulk-btn bulk-btn-approved" onclick="bulkSetStatus('approved')">Approved</button>
       <button class="bulk-btn bulk-btn-production" onclick="bulkSetStatus('production')">Sent to Production</button>
       <button class="bulk-btn bulk-btn-complete" onclick="bulkSetStatus('complete')">Complete</button>
@@ -404,7 +404,7 @@ function esc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-var STATUS_LABELS = { proof: 'Proof Sent', 'proof-complete': 'Proof Complete', approved: 'Approved', production: 'In Production', complete: 'Complete' };
+var STATUS_LABELS = { proof: 'Proof Sent', 'proof-complete': 'Proof Ready', approved: 'Approved', production: 'In Production', complete: 'Complete' };
 var STATUS_BADGE  = { proof: 'sb-proof', 'proof-complete': 'sb-proof-complete', approved: 'sb-approved', production: 'sb-production', complete: 'sb-complete' };
 var CARD_CLASS    = { proof: 's-proof', 'proof-complete': 's-proof-complete', approved: 's-approved', production: 's-production', complete: 's-complete' };
 
@@ -458,8 +458,8 @@ function renderOrders() {
 
     html += '<div class="section-label" style="margin-top:14px">Status</div>';
     html += '<div class="status-actions">';
+    html += '<button class="s-btn s-btn-proof-complete' + (st==='proof-complete' ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'proof-complete\')">Proof Ready</button>';
     html += '<button class="s-btn s-btn-proof'          + (st==='proof'          ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'proof\')">Proof Sent</button>';
-    html += '<button class="s-btn s-btn-proof-complete' + (st==='proof-complete' ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'proof-complete\')">Proof Complete</button>';
     html += '<button class="s-btn s-btn-approved'       + (st==='approved'       ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'approved\')">Approved</button>';
     html += '<button class="s-btn s-btn-production' + (st==='production' ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'production\')">Sent to Production</button>';
     html += '<button class="s-btn s-btn-complete'   + (st==='complete'   ? ' active':'') + '" onclick="setOrderStatus(' + i + ',\'complete\')">Complete</button>';
