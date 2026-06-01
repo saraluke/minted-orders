@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="icon" type="image/png" href="favicon.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sara Luke Creative — Minted Orders</title>
@@ -312,7 +312,11 @@ function saveStatus() {
   var val = JSON.stringify(statusData);
   try { localStorage.setItem(STATUS_KEY, val); } catch(e) {}
   setSyncLabel('Saving...');
-  fetch(scriptURL({ action: 'set', key: STATUS_KEY, value: val }))
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'action=set&key=' + encodeURIComponent(STATUS_KEY) + '&value=' + encodeURIComponent(val)
+  })
     .then(function(r) { return r.json(); })
     .then(function() { setSyncLabel('Saved'); })
     .catch(function() { setSyncLabel('Saved locally'); });
@@ -322,7 +326,11 @@ function saveNotes() {
   var val = JSON.stringify(notesData);
   try { localStorage.setItem(NOTES_KEY, val); } catch(e) {}
   setSyncLabel('Saving...');
-  fetch(scriptURL({ action: 'set', key: NOTES_KEY, value: val }))
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'action=set&key=' + encodeURIComponent(NOTES_KEY) + '&value=' + encodeURIComponent(val)
+  })
     .then(function(r) { return r.json(); })
     .then(function() { setSyncLabel('Saved'); })
     .catch(function() { setSyncLabel('Saved locally'); });
@@ -331,7 +339,11 @@ function saveNotes() {
 function saveTimestamps() {
   var val = JSON.stringify(timestampsData);
   try { localStorage.setItem(TIMESTAMPS_KEY, val); } catch(e) {}
-  fetch(scriptURL({ action: 'set', key: TIMESTAMPS_KEY, value: val }))
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'action=set&key=' + encodeURIComponent(TIMESTAMPS_KEY) + '&value=' + encodeURIComponent(val)
+  })
     .then(function(r) { return r.json(); })
     .catch(function() {});
 }
@@ -566,12 +578,6 @@ function updateSelectionUI() {
 
 function setOrderStatus(i, status) {
   var o = ordersData[i];
-  if (status === 'proof') {
-    timestampsData[o.id] = Date.now();
-    saveTimestamps();
-  } else if (status === '' || (status !== 'proof')) {
-    // keep timestamp if switching away so history is preserved
-  }
   if (status === 'production') {
     openModal([o.id], function(note) {
       if (note !== null) { notesData[o.id] = note; saveNotes(); }
@@ -579,6 +585,10 @@ function setOrderStatus(i, status) {
       renderOrders();
     });
   } else {
+    if (status === 'proof') {
+      timestampsData[o.id] = Date.now();
+      saveTimestamps();
+    }
     applyStatus([o.id], status);
     renderOrders();
   }
@@ -675,7 +685,7 @@ function applyVisibility() {
   var noteQuery = noteEl ? noteEl.value.trim().toLowerCase() : '';
   var counts = { all: 0, proof: 0, 'proof-complete': 0, approved: 0, production: 0, complete: 0, pending: 0 };
 
-  // When in proof view, sort overdue to top then by timestamp oldest first
+  // When in proof view, sort by overdue first then oldest timestamp
   if (activeFilter === 'proof') {
     ordersData.sort(function(a, b) {
       var tsA = timestampsData[a.id] || 0;
@@ -685,8 +695,6 @@ function applyVisibility() {
       if (overdueA !== overdueB) return overdueA - overdueB;
       return tsA - tsB;
     });
-    renderOrders();
-    return;
   }
 
   ordersData.forEach(function(o, i) {
