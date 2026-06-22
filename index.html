@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sara Luke Creative — Minted Orders</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -53,16 +54,17 @@
   .selection-banner.visible { display: flex; }
   .selection-banner-count { font-size: 0.78rem; font-weight: 600; color: var(--navy); margin-right: auto; }
 
-  .bulk-bar { background: var(--navy); border-radius: 6px; padding: 10px 16px; margin-bottom: 14px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .bulk-bar { background: var(--navy); border-radius: 6px; padding: 10px 16px; margin-bottom: 14px; display: none; align-items: center; gap: 8px; flex-wrap: wrap; }
   .bulk-bar.visible { display: flex; }
   .bulk-count { font-size: 0.72rem; color: var(--pink-light); font-weight: 600; margin-right: auto; }
-  .bulk-btn { padding: 6px 14px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; }
+  .bulk-btn { padding: 6px 14px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; white-space: nowrap; }
   .bulk-btn-proof { background: var(--status-proof); color: white; }
   .bulk-btn-approved { background: var(--status-approved); color: white; }
   .bulk-btn-production { background: var(--status-production); color: white; }
   .bulk-btn-complete { background: var(--status-complete); color: white; }
   .bulk-btn-clear { background: transparent; color: #aaa; border: 1px solid #555; }
   .bulk-btn:hover { opacity: 0.85; }
+  .bulk-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   .select-all-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.7rem; color: var(--muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
   .select-all-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
@@ -85,6 +87,7 @@
   .order-meta { font-size: 0.7rem; color: var(--muted); display: flex; gap: 12px; flex: 1; flex-wrap: wrap; align-items: center; }
   .badge { font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   .badge-design { background: #faeef2; color: var(--pink-dark); }
+  .badge-slip { background: #eef3ea; color: var(--green); }
   .status-badge { font-size: 0.6rem; padding: 2px 9px; border-radius: 20px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: white; }
   .sb-proof { background: var(--status-proof); }
   .sb-proof-complete { background: #a0b8a0; }
@@ -117,6 +120,8 @@
   .btn-outline:hover { background: var(--navy); color: white; }
   .btn-pink { background: var(--pink-dark); color: white; }
   .btn-pink:hover { background: #c45e76; }
+  .btn-green { background: var(--green); color: white; }
+  .btn-green:hover { background: #47523f; }
   .btn.copied { background: var(--green) !important; border-color: var(--green) !important; color: white !important; }
 
   .status-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
@@ -148,6 +153,8 @@
   .modal-skip { background: white; color: var(--muted); border: 1px solid var(--border); padding: 8px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
   .modal-save { background: var(--status-production); color: white; border: none; padding: 8px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
   .modal-save:hover { opacity: 0.85; }
+
+  .pdf-progress { font-size: 0.72rem; color: var(--pink-light); font-style: italic; }
 </style>
 </head>
 <body>
@@ -167,13 +174,11 @@
 <div class="main">
   <div id="toolbar" style="display:none">
 
-    <!-- Row 1: order count + inline refresh -->
     <div class="toolbar-top">
       <span class="order-count" id="order-count"></span>
       <button id="refresh-btn2" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:20px;font-family:Montserrat,sans-serif;font-size:0.65rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;" onclick="loadOrders()">↺ Refresh</button>
     </div>
 
-    <!-- Row 2: filter buttons -->
     <div class="toolbar-filters">
       <button class="filter-btn f-pending active" id="filter-pending" onclick="setFilter('pending')">No Status</button>
       <button class="filter-btn f-proof-complete" id="filter-proof-complete" onclick="setFilter('proof-complete')">Proof Ready</button>
@@ -184,18 +189,15 @@
       <button class="filter-btn" id="filter-all" onclick="setFilter('all')">All</button>
     </div>
 
-    <!-- Note search -->
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <input id="note-search" type="text" placeholder="Filter by note text..." oninput="applyVisibility()" style="border:1.5px solid var(--border);border-radius:20px;padding:5px 14px;font-family:Montserrat,sans-serif;font-size:0.7rem;color:var(--text);width:240px;background:white;" />
       <button onclick="clearNoteSearch()" style="background:transparent;border:none;color:var(--muted);font-size:0.75rem;cursor:pointer;font-family:Montserrat,sans-serif;padding:0 2px;" title="Clear note filter">✕</button>
     </div>
 
-    <!-- Selection count banner -->
     <div class="selection-banner" id="selection-banner">
       <span class="selection-banner-count" id="selection-banner-count">0 orders selected</span>
     </div>
 
-    <!-- Bulk action bar -->
     <div class="bulk-bar" id="bulk-bar">
       <span class="bulk-count" id="bulk-count">0 selected</span>
       <button class="bulk-btn" style="background:#a0b8a0;color:white;" onclick="bulkSetStatus('proof-complete')">Proof Ready</button>
@@ -203,11 +205,13 @@
       <button class="bulk-btn bulk-btn-approved" onclick="bulkSetStatus('approved')">Approved</button>
       <button class="bulk-btn bulk-btn-production" onclick="bulkSetStatus('production')">Sent to Production</button>
       <button class="bulk-btn bulk-btn-complete" onclick="bulkSetStatus('complete')">Complete</button>
-      <button class="bulk-btn" id="copy-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks()">Copy Order Links</button>
+      <button class="bulk-btn" id="copy-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks('order')">Copy Order Links</button>
+      <button class="bulk-btn" id="copy-msg-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks('msg')">Copy Message Links</button>
+      <button class="bulk-btn" id="download-slips-btn" style="background:var(--tangerine);color:white;" onclick="downloadSelectedSlips()">Download Slips PDF</button>
+      <span class="pdf-progress" id="pdf-progress"></span>
       <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear</button>
     </div>
 
-    <!-- Select all -->
     <div class="select-all-row">
       <input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)">
       <label for="select-all-cb">Select all visible</label>
@@ -380,6 +384,7 @@ function loadOrders() {
           orderNum: orderNum,
           orderDate: (row[7] || '').trim(),
           msgLink: (row[9] || '').trim(),
+          slipUrl: (row[11] || '').trim(),
           rowIndex: i + 1
         });
       });
@@ -424,6 +429,7 @@ function renderOrders() {
     html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
     if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
     if (st) html += '<span><span class="status-badge ' + STATUS_BADGE[st] + '">' + STATUS_LABELS[st] + '</span></span>';
+    if (o.slipUrl) html += '<span><span class="badge badge-slip">✓ Slip</span></span>';
     if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
     if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
     html += '</div>';
@@ -454,6 +460,7 @@ function renderOrders() {
     if (o.pers)      html += '<button class="btn btn-pink" id="cp-' + i + '" onclick="copyField(' + i + ',\'pers\')">Copy Personalization</button>';
     if (o.orderLink) html += '<a class="btn btn-outline" href="' + esc(o.orderLink) + '" target="_blank">View Order</a>';
     if (o.msgLink)   html += '<a class="btn btn-outline" href="' + esc(o.msgLink) + '" target="_blank">Message Customer</a>';
+    if (o.slipUrl)   html += '<a class="btn btn-green" href="' + esc(o.slipUrl) + '" target="_blank">View Delivery Slip</a>';
     html += '</div>';
 
     html += '<div class="section-label" style="margin-top:14px">Status</div>';
@@ -512,6 +519,19 @@ function updateSelectionUI() {
   var bannerCount = document.getElementById('selection-banner-count');
   var bar = document.getElementById('bulk-bar');
   var bulkCount = document.getElementById('bulk-count');
+
+  // Check how many selected have slip URLs
+  var slipCount = 0;
+  Object.keys(selectedIds).forEach(function(id) {
+    var o = ordersData.find(function(x) { return x.id === id; });
+    if (o && o.slipUrl) slipCount++;
+  });
+  var slipBtn = document.getElementById('download-slips-btn');
+  if (slipBtn) {
+    slipBtn.disabled = slipCount === 0;
+    slipBtn.textContent = slipCount > 0 ? 'Download ' + slipCount + ' Slip' + (slipCount !== 1 ? 's' : '') + ' PDF' : 'Download Slips PDF';
+  }
+
   if (count > 0) {
     banner.classList.add('visible');
     bannerCount.textContent = count + ' order' + (count !== 1 ? 's' : '') + ' selected';
@@ -638,24 +658,100 @@ function applyVisibility() {
   updateCount(counts);
 }
 
-function copySelectedLinks() {
+// ── Copy links ────────────────────────────────────────────────────────────────
+function copySelectedLinks(type) {
   var ids = Object.keys(selectedIds);
   var lines = [];
   ids.forEach(function(id) {
     var o = ordersData.find(function(x) { return x.id === id; });
-    if (o && o.orderLink) lines.push(o.orderLink);
+    if (!o) return;
+    var url = type === 'msg' ? o.msgLink : o.orderLink;
+    if (url) lines.push(url);
   });
   if (!lines.length) return;
   var text = lines.join('\n');
+  var btnId = type === 'msg' ? 'copy-msg-links-btn' : 'copy-links-btn';
+  copyToClipboard(text, function() {
+    var btn = document.getElementById(btnId);
+    if (btn) {
+      var orig = btn.textContent;
+      btn.textContent = '✓ ' + lines.length + ' Links Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 2000);
+    }
+  });
+}
+
+function copyToClipboard(text, callback) {
   var ta = document.createElement('textarea');
   ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
   document.body.appendChild(ta); ta.focus(); ta.select();
   var ok = false;
   try { ok = document.execCommand('copy'); } catch(e) {}
   document.body.removeChild(ta);
-  if (!ok && navigator.clipboard) { navigator.clipboard.writeText(text); }
-  var btn = document.getElementById('copy-links-btn');
-  if (btn) { var orig = btn.textContent; btn.textContent = '✓ ' + lines.length + ' Links Copied!'; setTimeout(function() { btn.textContent = orig; }, 2000); }
+  if (ok) { if (callback) callback(); }
+  else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function() { if (callback) callback(); }); }
+}
+
+// ── Download slips PDF ────────────────────────────────────────────────────────
+async function downloadSelectedSlips() {
+  var ids = Object.keys(selectedIds);
+  var orders = ids.map(function(id) {
+    return ordersData.find(function(x) { return x.id === id; });
+  }).filter(function(o) { return o && o.slipUrl; });
+
+  if (!orders.length) return;
+
+  var btn = document.getElementById('download-slips-btn');
+  var progress = document.getElementById('pdf-progress');
+  btn.disabled = true;
+  progress.textContent = 'Fetching slips...';
+
+  try {
+    var mergedPdf = await PDFLib.PDFDocument.create();
+
+    for (var i = 0; i < orders.length; i++) {
+      var o = orders[i];
+      progress.textContent = 'Loading ' + (i + 1) + ' of ' + orders.length + '...';
+
+      // Convert Drive view URL to direct download URL
+      var url = o.slipUrl;
+      var match = url.match(/\/file\/d\/([^\/]+)/);
+      if (match) {
+        url = 'https://drive.google.com/uc?export=download&id=' + match[1];
+      }
+
+      try {
+        var resp = await fetch(url);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        var bytes = await resp.arrayBuffer();
+        var pdf = await PDFLib.PDFDocument.load(bytes);
+        var pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+        pages.forEach(function(p) { mergedPdf.addPage(p); });
+      } catch(e) {
+        console.warn('Could not load slip for ' + o.name + ':', e);
+        progress.textContent = 'Could not load slip for ' + o.name + ' — skipping...';
+        await new Promise(function(r) { setTimeout(r, 1200); });
+      }
+    }
+
+    progress.textContent = 'Building PDF...';
+    var pdfBytes = await mergedPdf.save();
+    var blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'delivery-slips-' + new Date().toISOString().slice(0,10) + '.pdf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    progress.textContent = '✓ Downloaded!';
+    setTimeout(function() { progress.textContent = ''; }, 3000);
+  } catch(e) {
+    progress.textContent = 'Error: ' + e.message;
+    setTimeout(function() { progress.textContent = ''; }, 4000);
+  }
+
+  btn.disabled = false;
+  updateSelectionUI();
 }
 
 function updateCount(counts) {
@@ -682,14 +778,7 @@ function copyField(i, field) {
   var text = field === 'file' ? o.filePath : o.pers;
   var btnId = field === 'file' ? 'cf-' + i : 'cp-' + i;
   if (!text) return;
-  var ta = document.createElement('textarea');
-  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
-  document.body.appendChild(ta); ta.focus(); ta.select();
-  var ok = false;
-  try { ok = document.execCommand('copy'); } catch(e) {}
-  document.body.removeChild(ta);
-  if (ok) { flashCopied(btnId); }
-  else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function() { flashCopied(btnId); }); }
+  copyToClipboard(text, function() { flashCopied(btnId); });
 }
 
 function flashCopied(btnId) {
