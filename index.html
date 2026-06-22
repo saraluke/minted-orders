@@ -668,14 +668,26 @@ function copySelectedLinks(type) {
   if (!lines.length) return;
   var text = lines.join('\n');
   var btnId = type === 'msg' ? 'copy-msg-links-btn' : type === 'slip' ? 'copy-slips-btn' : 'copy-links-btn';
-  copyToClipboard(text, function() {
+
+  if (type === 'slip') {
+    var encoded = encodeURIComponent(text);
+    window.open('slip-merger.html?urls=' + encoded, '_blank');
     var btn = document.getElementById(btnId);
     if (btn) {
       var orig = btn.textContent;
-      btn.textContent = '✓ ' + lines.length + ' Links Copied!';
+      btn.textContent = '✓ Opening Merger...';
       setTimeout(function() { btn.textContent = orig; }, 2000);
     }
-  });
+  } else {
+    copyToClipboard(text, function() {
+      var btn = document.getElementById(btnId);
+      if (btn) {
+        var orig = btn.textContent;
+        btn.textContent = '✓ ' + lines.length + ' Links Copied!';
+        setTimeout(function() { btn.textContent = orig; }, 2000);
+      }
+    });
+  }
 }
 
 function copyToClipboard(text, callback) {
