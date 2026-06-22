@@ -150,6 +150,8 @@ function updateLog(id, text, state) {
   textEl.className = 'log-text' + (state === 'error' ? ' error' : '');
 }
 
+var PROXY_URL = 'https://dropbox-pdf-proxy.sara-5fa.workers.dev/';
+
 function normalizeDropboxUrl(url) {
   // Change dl=0 to dl=1 to force direct download, but preserve rlkey and other params
   if (url.indexOf('dl=0') !== -1) {
@@ -157,7 +159,8 @@ function normalizeDropboxUrl(url) {
   } else if (url.indexOf('dl=') === -1) {
     url = url + (url.indexOf('?') !== -1 ? '&' : '?') + 'dl=1';
   }
-  return url;
+  // Route through proxy to avoid CORS issues
+  return PROXY_URL + '?url=' + encodeURIComponent(url);
 }
 
 async function mergeSlips() {
