@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sara Luke Creative — Slip Merger</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --pink-light: #F3C4D6; --navy: #394350; --pink-dark: #D56D85;
+    --green: #58634F; --tangerine: #E49855; --bg: #faf8f6;
+    --card: #ffffff; --border: #e8e0d8; --text: #2a2420; --muted: #8a7f78;
+  }
+  body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  header { background: var(--navy); padding: 18px 32px; border-bottom: 3px solid var(--pink-dark); }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 1.25rem; color: var(--pink-light); font-weight: 400; }
+  header .subtitle { font-size: 0.7rem; color: var(--pink-dark); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; margin-top: 2px; }
+
+  .main { max-width: 680px; margin: 0 auto; padding: 40px 24px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 28px; margin-bottom: 20px; }
+
+  h2 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--navy); margin-bottom: 6px; }
+  p { font-size: 0.78rem; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+
+  textarea {
+    width: 100%;
+    height: 180px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.72rem;
+    color: var(--text);
+    resize: vertical;
+    background: #fdf9fb;
+    line-height: 1.7;
+  }
+  textarea:focus { outline: none; border-color: var(--pink-dark); }
+  textarea::placeholder { color: var(--muted); }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 22px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: var(--navy); color: white; }
+  .btn-primary:hover { background: #2a3140; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-clear { background: white; color: var(--muted); border: 1.5px solid var(--border); }
+  .btn-clear:hover { border-color: var(--pink-dark); color: var(--pink-dark); }
+
+  .url-count { font-size: 0.7rem; color: var(--muted); }
+
+  .log { margin-top: 20px; }
+  .log-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.72rem; }
+  .log-item:last-child { border-bottom: none; }
+  .log-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+  .log-dot.pending { background: var(--border); }
+  .log-dot.loading { background: var(--tangerine); animation: pulse 1s infinite; }
+  .log-dot.ok { background: #7cb87c; }
+  .log-dot.error { background: #c97070; }
+  .log-text { color: var(--text); flex: 1; }
+  .log-text.error { color: #c97070; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .result { background: #f0f5f0; border: 1px solid #b8d4b8; border-radius: 6px; padding: 16px 20px; display: none; align-items: center; gap: 14px; }
+  .result.visible { display: flex; }
+  .result-text { font-size: 0.78rem; color: var(--green); font-weight: 600; flex: 1; }
+  .btn-download { background: var(--green); color: white; }
+  .btn-download:hover { background: #47523f; }
+
+  .error-banner { background: #fdf0f0; border: 1px solid #e8c0c0; border-radius: 6px; padding: 12px 16px; font-size: 0.72rem; color: #c97070; display: none; margin-top: 14px; }
+  .error-banner.visible { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sara Luke Creative</h1>
+  <div class="subtitle">Delivery Slip Merger</div>
+</header>
+
+<div class="main">
+  <div class="card">
+    <h2>Paste Slip Links</h2>
+    <p>Copy slip links from your order dashboard, then paste them here — one per line. Click Merge to combine them into a single PDF for printing.</p>
+    <textarea id="url-input" placeholder="https://dl.dropboxusercontent.com/...&#10;https://dl.dropboxusercontent.com/...&#10;https://dl.dropboxusercontent.com/..." oninput="updateCount()"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="merge-btn" onclick="mergeSlips()">⬡ Merge PDFs</button>
+      <button class="btn btn-clear" onclick="clearAll()">Clear</button>
+      <span class="url-count" id="url-count"></span>
+    </div>
+    <div class="error-banner" id="error-banner"></div>
+  </div>
+
+  <div class="card" id="log-card" style="display:none">
+    <h2>Progress</h2>
+    <div class="log" id="log"></div>
+    <div class="result" id="result">
+      <span class="result-text" id="result-text"></span>
+      <button class="btn btn-download" id="download-btn" onclick="triggerDownload()">⬇ Download PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var mergedPdfBytes = null;
+var downloadFilename = '';
+
+function updateCount() {
+  var urls = getUrls();
+  var el = document.getElementById('url-count');
+  el.textContent = urls.length > 0 ? urls.length + ' link' + (urls.length !== 1 ? 's' : '') : '';
+}
+
+function getUrls() {
+  var raw = document.getElementById('url-input').value;
+  return raw.split('\n').map(function(u) { return u.trim(); }).filter(function(u) { return u.length > 0; });
+}
+
+function clearAll() {
+  document.getElementById('url-input').value = '';
+  document.getElementById('log-card').style.display = 'none';
+  document.getElementById('result').classList.remove('visible');
+  document.getElementById('error-banner').classList.remove('visible');
+  document.getElementById('log').innerHTML = '';
+  updateCount();
+  mergedPdfBytes = null;
+}
+
+function addLog(text, state) {
+  var log = document.getElementById('log');
+  var id = 'log-' + Date.now() + Math.random();
+  var div = document.createElement('div');
+  div.className = 'log-item';
+  div.id = id;
+  div.innerHTML = '<div class="log-dot ' + state + '"></div><div class="log-text' + (state === 'error' ? ' error' : '') + '">' + text + '</div>';
+  log.appendChild(div);
+  return id;
+}
+
+function updateLog(id, text, state) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.querySelector('.log-dot').className = 'log-dot ' + state;
+  var textEl = el.querySelector('.log-text');
+  textEl.textContent = text;
+  textEl.className = 'log-text' + (state === 'error' ? ' error' : '');
+}
+
+function normalizeDropboxUrl(url) {
+  // Convert any Dropbox share URL to direct download
+  url = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com');
+  url = url.replace('?dl=0', '').replace('?dl=1', '');
+  // Remove any trailing share parameters
+  url = url.replace(/\?.*$/, '');
+  return url;
+}
+
+async function mergeSlips() {
+  var urls = getUrls();
+  if (urls.length === 0) {
+    var banner = document.getElementById('error-banner');
+    banner.textContent = 'Please paste at least one URL.';
+    banner.classList.add('visible');
+    return;
+  }
+
+  document.getElementById('error-banner').classList.remove('visible');
+  document.getElementById('log-card').style.display = 'block';
+  document.getElementById('result').classList.remove('visible');
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('merge-btn').disabled = true;
+  mergedPdfBytes = null;
+
+  var initId = addLog('Starting merge of ' + urls.length + ' slip' + (urls.length !== 1 ? 's' : '') + '...', 'loading');
+
+  try {
+    var mergedPdf = await PDFLib.PDFDocument.create();
+    var successCount = 0;
+    var failCount = 0;
+
+    updateLog(initId, 'Initialized — fetching slips...', 'ok');
+
+    for (var i = 0; i < urls.length; i++) {
+      var rawUrl = urls[i];
+      var url = normalizeDropboxUrl(rawUrl);
+      var label = 'Slip ' + (i + 1) + ' of ' + urls.length;
+      var logId = addLog(label + ' — fetching...', 'loading');
+
+      try {
+        var resp = await fetch(url);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+        var contentType = resp.headers.get('content-type') || '';
+        if (contentType.indexOf('text/html') !== -1) {
+          throw new Error('Got an HTML page instead of PDF — link may have expired');
+        }
+
+        var bytes = await resp.arrayBuffer();
+        var pdf = await PDFLib.PDFDocument.load(bytes);
+        var pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+        pages.forEach(function(p) { mergedPdf.addPage(p); });
+        successCount++;
+        updateLog(logId, label + ' — ✓ added (' + pdf.getPageCount() + ' page' + (pdf.getPageCount() !== 1 ? 's' : '') + ')', 'ok');
+      } catch(e) {
+        failCount++;
+        updateLog(logId, label + ' — ✗ failed: ' + e.message, 'error');
+      }
+    }
+
+    if (successCount === 0) {
+      addLog('No slips could be loaded. Check that the links are valid Dropbox URLs.', 'error');
+      document.getElementById('merge-btn').disabled = false;
+      return;
+    }
+
+    var buildId = addLog('Building merged PDF...', 'loading');
+    mergedPdfBytes = await mergedPdf.save();
+    updateLog(buildId, 'Done! Merged ' + successCount + ' slip' + (successCount !== 1 ? 's' : '') + (failCount > 0 ? ' (' + failCount + ' failed)' : '') + '.', 'ok');
+
+    downloadFilename = 'delivery-slips-' + new Date().toISOString().slice(0,10) + '.pdf';
+    var resultText = document.getElementById('result-text');
+    resultText.textContent = successCount + ' slip' + (successCount !== 1 ? 's' : '') + ' merged into one PDF' + (failCount > 0 ? ' (' + failCount + ' skipped)' : '') + ' — ready to download!';
+    document.getElementById('result').classList.add('visible');
+
+  } catch(e) {
+    addLog('Unexpected error: ' + e.message, 'error');
+  }
+
+  document.getElementById('merge-btn').disabled = false;
+}
+
+function triggerDownload() {
+  if (!mergedPdfBytes) return;
+  var blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = downloadFilename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+updateCount();
+
+// Auto-populate from URL parameter if present
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var urls = params.get('urls');
+  if (urls) {
+    document.getElementById('url-input').value = decodeURIComponent(urls);
+    updateCount();
+  }
+})();
+</script>
+</body>
+</html>
