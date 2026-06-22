@@ -717,12 +717,17 @@ async function downloadSelectedSlips() {
       var url = o.slipUrl;
       var match = url.match(/\/file\/d\/([^\/]+)/);
       if (match) {
-        url = 'https://drive.google.com/uc?export=download&id=' + match[1];
+        url = 'https://drive.google.com/uc?export=download&id=' + match[1] + '&confirm=t';
       }
 
       try {
-        var resp = await fetch(url);
+        var resp = await fetch(url, { credentials: 'include' });
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        // Check if Google returned an HTML confirmation page instead of PDF
+        var contentType = resp.headers.get('content-type') || '';
+        if (contentType.indexOf('text/html') !== -1) {
+          throw new Error('Google returned a confirmation page — file may be too large or blocked');
+        }
         var bytes = await resp.arrayBuffer();
         var pdf = await PDFLib.PDFDocument.load(bytes);
         var pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
