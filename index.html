@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sara Luke Creative — Minted Orders</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -154,7 +153,6 @@
   .modal-save { background: var(--status-production); color: white; border: none; padding: 8px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
   .modal-save:hover { opacity: 0.85; }
 
-  .pdf-progress { font-size: 0.72rem; color: var(--pink-light); font-style: italic; }
 </style>
 </head>
 <body>
@@ -207,8 +205,7 @@
       <button class="bulk-btn bulk-btn-complete" onclick="bulkSetStatus('complete')">Complete</button>
       <button class="bulk-btn" id="copy-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks('order')">Copy Order Links</button>
       <button class="bulk-btn" id="copy-msg-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks('msg')">Copy Message Links</button>
-      <button class="bulk-btn" id="download-slips-btn" style="background:var(--tangerine);color:white;" onclick="downloadSelectedSlips()">Download Slips PDF</button>
-      <span class="pdf-progress" id="pdf-progress"></span>
+      <button class="bulk-btn" id="copy-slips-btn" style="background:var(--tangerine);color:white;" onclick="copySelectedLinks('slip')">Copy Slip Links</button>
       <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear</button>
     </div>
 
@@ -384,7 +381,7 @@ function loadOrders() {
           orderNum: orderNum,
           orderDate: (row[7] || '').trim(),
           msgLink: (row[9] || '').trim(),
-          slipUrl: (row[11] || '').trim(),
+          slipUrl: (row[12] || '').trim().replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', ''),
           rowIndex: i + 1
         });
       });
@@ -526,10 +523,10 @@ function updateSelectionUI() {
     var o = ordersData.find(function(x) { return x.id === id; });
     if (o && o.slipUrl) slipCount++;
   });
-  var slipBtn = document.getElementById('download-slips-btn');
+  var slipBtn = document.getElementById('copy-slips-btn');
   if (slipBtn) {
     slipBtn.disabled = slipCount === 0;
-    slipBtn.textContent = slipCount > 0 ? 'Download ' + slipCount + ' Slip' + (slipCount !== 1 ? 's' : '') + ' PDF' : 'Download Slips PDF';
+    slipBtn.textContent = slipCount > 0 ? 'Copy ' + slipCount + ' Slip Link' + (slipCount !== 1 ? 's' : '') : 'Copy Slip Links';
   }
 
   if (count > 0) {
@@ -665,12 +662,12 @@ function copySelectedLinks(type) {
   ids.forEach(function(id) {
     var o = ordersData.find(function(x) { return x.id === id; });
     if (!o) return;
-    var url = type === 'msg' ? o.msgLink : o.orderLink;
+    var url = type === 'msg' ? o.msgLink : type === 'slip' ? o.slipUrl : o.orderLink;
     if (url) lines.push(url);
   });
   if (!lines.length) return;
   var text = lines.join('\n');
-  var btnId = type === 'msg' ? 'copy-msg-links-btn' : 'copy-links-btn';
+  var btnId = type === 'msg' ? 'copy-msg-links-btn' : type === 'slip' ? 'copy-slips-btn' : 'copy-links-btn';
   copyToClipboard(text, function() {
     var btn = document.getElementById(btnId);
     if (btn) {
@@ -690,73 +687,6 @@ function copyToClipboard(text, callback) {
   document.body.removeChild(ta);
   if (ok) { if (callback) callback(); }
   else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function() { if (callback) callback(); }); }
-}
-
-// ── Download slips PDF ────────────────────────────────────────────────────────
-async function downloadSelectedSlips() {
-  var ids = Object.keys(selectedIds);
-  var orders = ids.map(function(id) {
-    return ordersData.find(function(x) { return x.id === id; });
-  }).filter(function(o) { return o && o.slipUrl; });
-
-  if (!orders.length) return;
-
-  var btn = document.getElementById('download-slips-btn');
-  var progress = document.getElementById('pdf-progress');
-  btn.disabled = true;
-  progress.textContent = 'Fetching slips...';
-
-  try {
-    var mergedPdf = await PDFLib.PDFDocument.create();
-
-    for (var i = 0; i < orders.length; i++) {
-      var o = orders[i];
-      progress.textContent = 'Loading ' + (i + 1) + ' of ' + orders.length + '...';
-
-      // Convert Drive view URL to direct download URL
-      var url = o.slipUrl;
-      var match = url.match(/\/file\/d\/([^\/]+)/);
-      if (match) {
-        url = 'https://drive.google.com/uc?export=download&id=' + match[1] + '&confirm=t';
-      }
-
-      try {
-        var resp = await fetch(url, { credentials: 'include' });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        // Check if Google returned an HTML confirmation page instead of PDF
-        var contentType = resp.headers.get('content-type') || '';
-        if (contentType.indexOf('text/html') !== -1) {
-          throw new Error('Google returned a confirmation page — file may be too large or blocked');
-        }
-        var bytes = await resp.arrayBuffer();
-        var pdf = await PDFLib.PDFDocument.load(bytes);
-        var pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-        pages.forEach(function(p) { mergedPdf.addPage(p); });
-      } catch(e) {
-        console.warn('Could not load slip for ' + o.name + ':', e);
-        progress.textContent = 'Could not load slip for ' + o.name + ' — skipping...';
-        await new Promise(function(r) { setTimeout(r, 1200); });
-      }
-    }
-
-    progress.textContent = 'Building PDF...';
-    var pdfBytes = await mergedPdf.save();
-    var blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'delivery-slips-' + new Date().toISOString().slice(0,10) + '.pdf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    progress.textContent = '✓ Downloaded!';
-    setTimeout(function() { progress.textContent = ''; }, 3000);
-  } catch(e) {
-    progress.textContent = 'Error: ' + e.message;
-    setTimeout(function() { progress.textContent = ''; }, 4000);
-  }
-
-  btn.disabled = false;
-  updateSelectionUI();
 }
 
 function updateCount(counts) {
