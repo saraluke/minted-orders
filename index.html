@@ -16,6 +16,7 @@
     --status-approved: #9b7fc4;
     --status-production: #c4a44a;
     --status-complete: #58634F;
+    --msg-color: #c47b4a;
   }
   body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
   header { background: var(--navy); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--pink-dark); }
@@ -87,6 +88,8 @@
   .badge { font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   .badge-design { background: #faeef2; color: var(--pink-dark); }
   .badge-slip { background: #eef3ea; color: var(--green); }
+  .badge-msg { background: var(--msg-color); color: white; font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px; animation: msg-pulse 2s ease-in-out infinite; }
+  @keyframes msg-pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
   .status-badge { font-size: 0.6rem; padding: 2px 9px; border-radius: 20px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: white; }
   .sb-proof { background: var(--status-proof); }
   .sb-proof-complete { background: #a0b8a0; }
@@ -101,6 +104,20 @@
   .section-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; margin: 12px 0 5px; }
   .pers-box { background: #f8f5f2; border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; font-size: 0.82rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; font-family: 'Montserrat', sans-serif; }
   .file-path { font-size: 0.7rem; color: var(--muted); font-family: 'Courier New', monospace; word-break: break-all; background: #f8f5f2; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--border); }
+
+  /* ── Messages panel ── */
+  .messages-toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; cursor: pointer; user-select: none; }
+  .messages-toggle-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--msg-color); font-weight: 600; }
+  .messages-chevron { font-size: 0.6rem; color: var(--msg-color); transition: transform 0.2s; }
+  .messages-panel { display: none; margin-top: 6px; border: 1px solid #e8d5c4; border-radius: 4px; overflow: hidden; }
+  .messages-panel.open { display: block; }
+  .messages-scroll { max-height: 220px; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .message-item { background: #fdf6f0; border: 1px solid #e8d5c4; border-radius: 4px; padding: 10px 12px; }
+  .message-item-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 8px; flex-wrap: wrap; }
+  .message-item-from { font-size: 0.62rem; font-weight: 600; color: var(--msg-color); letter-spacing: 0.04em; }
+  .message-item-link { font-size: 0.6rem; color: var(--navy); text-decoration: none; border: 1px solid var(--navy); border-radius: 3px; padding: 2px 7px; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; }
+  .message-item-link:hover { background: var(--navy); color: white; }
+  .message-item-text { font-size: 0.78rem; color: var(--text); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 
   .production-note-area { margin-top: 10px; }
   .production-note-display { font-size: 0.78rem; color: var(--text); background: #fffbf0; border: 1px solid #e8dfc0; border-radius: 4px; padding: 8px 12px; font-style: italic; display: none; }
@@ -152,7 +169,6 @@
   .modal-skip { background: white; color: var(--muted); border: 1px solid var(--border); padding: 8px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
   .modal-save { background: var(--status-production); color: white; border: none; padding: 8px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
   .modal-save:hover { opacity: 0.85; }
-
 </style>
 </head>
 <body>
@@ -235,14 +251,18 @@
 
 <script>
 var SHEET_ID    = '1ORRMZS2jhrCNrLNE-JQRsiyqn3h7sW3jQjtBfXzEXR4';
+var SHEET2_GID  = '1515748213';
 var SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbzrA8RXixGE24MC_CTo-1t5Ppria5zhfZB8eGM6AeKGgkvgGIyXvvXBAEdM9-MQbG42/exec';
 var STATUS_KEY  = 'slc_minted_status';
 var NOTES_KEY   = 'slc_minted_notes';
+var MSG_READ_KEY = 'slc_minted_msg_read'; // stores { orderNum: countSeen }
 
-var ordersData  = [];
-var statusData  = {};
-var notesData   = {};
-var selectedIds = {};
+var ordersData   = [];
+var statusData   = {};
+var notesData    = {};
+var msgReadData  = {}; // { orderNum: countSeen }
+var messagesData = {}; // { orderNum: [ {name, text, link}, ... ] }
+var selectedIds  = {};
 var activeFilter = 'pending';
 var modalContext = null;
 
@@ -264,10 +284,10 @@ function scriptURL(params) {
 
 function loadPersistedData(callback) {
   setSyncLabel('Syncing...');
-  var statusDone = false, notesDone = false;
+  var statusDone = false, notesDone = false, msgReadDone = false;
 
   function checkDone() {
-    if (statusDone && notesDone) { setSyncLabel('Synced'); callback(); }
+    if (statusDone && notesDone && msgReadDone) { setSyncLabel('Synced'); callback(); }
   }
 
   fetch(scriptURL({ action: 'get', key: STATUS_KEY }))
@@ -291,6 +311,17 @@ function loadPersistedData(callback) {
       try { var n = localStorage.getItem(NOTES_KEY); if (n) notesData = JSON.parse(n); } catch(e) {}
       notesDone = true; checkDone();
     });
+
+  fetch(scriptURL({ action: 'get', key: MSG_READ_KEY }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.value) { try { msgReadData = JSON.parse(data.value); } catch(e) { msgReadData = {}; } }
+      else { msgReadData = {}; }
+      msgReadDone = true; checkDone();
+    }).catch(function() {
+      try { var m = localStorage.getItem(MSG_READ_KEY); if (m) msgReadData = JSON.parse(m); } catch(e) {}
+      msgReadDone = true; checkDone();
+    });
 }
 
 function saveStatus() {
@@ -311,6 +342,13 @@ function saveNotes() {
     .then(function(r) { return r.json(); })
     .then(function() { setSyncLabel('Saved'); })
     .catch(function() { setSyncLabel('Saved locally'); });
+}
+
+function saveMsgRead() {
+  var val = JSON.stringify(msgReadData);
+  try { localStorage.setItem(MSG_READ_KEY, val); } catch(e) {}
+  fetch(scriptURL({ action: 'set', key: MSG_READ_KEY, value: val }))
+    .catch(function() {});
 }
 
 // ── Sheet loading ─────────────────────────────────────────────────────────────
@@ -351,6 +389,29 @@ function formatDate(str) {
   return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
 }
 
+function loadMessages(callback) {
+  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=' + SHEET2_GID;
+  fetch(url).then(function(res) {
+    if (!res.ok) { callback(); return; }
+    return res.text();
+  }).then(function(text) {
+    if (!text) { callback(); return; }
+    messagesData = {};
+    var rows = parseCSV(text);
+    rows.forEach(function(row, i) {
+      if (i === 0) return; // skip header
+      var orderNum = (row[0] || '').trim().replace(/^#/, '');
+      if (!orderNum) return;
+      var name = (row[1] || '').trim();
+      var msgText = (row[2] || '').trim();
+      var link = (row[3] || '').trim();
+      if (!messagesData[orderNum]) messagesData[orderNum] = [];
+      messagesData[orderNum].push({ name: name, text: msgText, link: link });
+    });
+    callback();
+  }).catch(function() { callback(); });
+}
+
 function loadOrders() {
   setDot('loading');
   selectedIds = {};
@@ -359,51 +420,60 @@ function loadOrders() {
   app.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading orders...</div>';
 
   loadPersistedData(function() {
-    var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
-    fetch(url).then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.text();
-    }).then(function(text) {
-      var rows = parseCSV(text);
-      ordersData = [];
-      rows.forEach(function(row, i) {
-        var name = (row[0] || '').trim();
-        if (!name || name === 'NAME') return;
-        var orderNum = (row[6] || '').trim();
-        var id = orderNum || ('row-' + i);
-        ordersData.push({
-          id: id,
-          name: name,
-          design: (row[1] || '').trim(),
-          orderLink: (row[2] || '').trim(),
-          pers: (row[3] || '').trim(),
-          filePath: (row[4] || '').trim(),
-          orderNum: orderNum,
-          orderDate: (row[7] || '').trim(),
-          msgLink: (row[9] || '').trim(),
-          slipUrl: (row[12] || '').trim().replace('dl=0', 'dl=1'),
-          rowIndex: i + 1
+    loadMessages(function() {
+      var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
+      fetch(url).then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      }).then(function(text) {
+        var rows = parseCSV(text);
+        ordersData = [];
+        rows.forEach(function(row, i) {
+          var name = (row[0] || '').trim();
+          if (!name || name === 'NAME') return;
+          var orderNum = (row[6] || '').trim();
+          var id = orderNum || ('row-' + i);
+          ordersData.push({
+            id: id,
+            name: name,
+            design: (row[1] || '').trim(),
+            orderLink: (row[2] || '').trim(),
+            pers: (row[3] || '').trim(),
+            filePath: (row[4] || '').trim(),
+            orderNum: orderNum,
+            orderDate: (row[7] || '').trim(),
+            msgLink: (row[9] || '').trim(),
+            slipUrl: (row[12] || '').trim().replace('dl=0', 'dl=1'),
+            rowIndex: i + 1
+          });
         });
-      });
-      ordersData.sort(function(a, b) { return parseDate(a.orderDate) - parseDate(b.orderDate); });
-      if (ordersData.length === 0) {
-        app.innerHTML = '<div class="empty">No orders found.</div>';
+        ordersData.sort(function(a, b) { return parseDate(a.orderDate) - parseDate(b.orderDate); });
+        if (ordersData.length === 0) {
+          app.innerHTML = '<div class="empty">No orders found.</div>';
+          setDot('error');
+          return;
+        }
+        setDot('loaded');
+        renderOrders();
+        document.getElementById('toolbar').style.display = 'block';
+        updateSelectionUI();
+      }).catch(function(e) {
         setDot('error');
-        return;
-      }
-      setDot('loaded');
-      renderOrders();
-      document.getElementById('toolbar').style.display = 'block';
-      updateSelectionUI();
-    }).catch(function(e) {
-      setDot('error');
-      app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
+        app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
+      });
     });
   });
 }
 
 function esc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function hasUnreadMessages(o) {
+  var msgs = messagesData[o.orderNum];
+  if (!msgs || msgs.length === 0) return false;
+  var seen = msgReadData[o.orderNum] || 0;
+  return msgs.length > seen;
 }
 
 var STATUS_LABELS = { proof: 'Proof Sent', 'proof-complete': 'Proof Ready', approved: 'Approved', production: 'In Production', complete: 'Complete' };
@@ -416,6 +486,8 @@ function renderOrders() {
   ordersData.forEach(function(o, i) {
     var st = statusData[o.id] || '';
     var note = notesData[o.id] || '';
+    var msgs = messagesData[o.orderNum] || [];
+    var unread = hasUnreadMessages(o);
     var cardClass = 'order-card' + (st ? ' ' + CARD_CLASS[st] : '');
     if (selectedIds[o.id]) cardClass += ' selected';
 
@@ -426,6 +498,7 @@ function renderOrders() {
     html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
     if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
     if (st) html += '<span><span class="status-badge ' + STATUS_BADGE[st] + '">' + STATUS_LABELS[st] + '</span></span>';
+    if (unread) html += '<span><span class="badge-msg">✉ ' + msgs.length + ' message' + (msgs.length !== 1 ? 's' : '') + '</span></span>';
     if (o.slipUrl) html += '<span><span class="badge badge-slip">✓ Slip</span></span>';
     if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
     if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
@@ -434,6 +507,27 @@ function renderOrders() {
     html += '</div>';
 
     html += '<div class="card-body">';
+
+    // Messages panel (only if messages exist)
+    if (msgs.length > 0) {
+      html += '<div class="messages-toggle" onclick="toggleMessages(' + i + ')" id="msg-toggle-' + i + '">';
+      html += '<span class="messages-toggle-label">✉ Messages (' + msgs.length + ')</span>';
+      html += '<span class="messages-chevron" id="msg-chev-' + i + '">▶</span>';
+      html += '</div>';
+      html += '<div class="messages-panel" id="msg-panel-' + i + '">';
+      html += '<div class="messages-scroll">';
+      msgs.forEach(function(m) {
+        html += '<div class="message-item">';
+        html += '<div class="message-item-meta">';
+        html += '<span class="message-item-from">' + esc(m.name || 'Customer') + '</span>';
+        if (m.link) html += '<a class="message-item-link" href="' + esc(m.link) + '" target="_blank">View Thread →</a>';
+        html += '</div>';
+        html += '<div class="message-item-text">' + esc(m.text) + '</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+
     if (o.pers) {
       html += '<div class="section-label">Personalization</div>';
       html += '<div class="pers-box">' + esc(o.pers) + '</div>';
@@ -474,6 +568,31 @@ function renderOrders() {
   });
   app.innerHTML = html || '<div class="empty">No orders found.</div>';
   applyVisibility();
+}
+
+function toggleMessages(i) {
+  var panel = document.getElementById('msg-panel-' + i);
+  var chev  = document.getElementById('msg-chev-' + i);
+  if (!panel) return;
+  var isOpen = panel.classList.contains('open');
+  if (!isOpen) {
+    panel.classList.add('open');
+    if (chev) chev.textContent = '▼';
+    // Mark as read: store count of messages seen
+    var o = ordersData[i];
+    var msgs = messagesData[o.orderNum] || [];
+    msgReadData[o.orderNum] = msgs.length;
+    saveMsgRead();
+    // Remove badge from header
+    var card = document.getElementById('card-' + i);
+    if (card) {
+      var badge = card.querySelector('.badge-msg');
+      if (badge) badge.parentElement.remove();
+    }
+  } else {
+    panel.classList.remove('open');
+    if (chev) chev.textContent = '▶';
+  }
 }
 
 function toggleCard(i) { document.getElementById('card-' + i).classList.toggle('open'); }
@@ -517,7 +636,6 @@ function updateSelectionUI() {
   var bar = document.getElementById('bulk-bar');
   var bulkCount = document.getElementById('bulk-count');
 
-  // Check how many selected have slip URLs
   var slipCount = 0;
   Object.keys(selectedIds).forEach(function(id) {
     var o = ordersData.find(function(x) { return x.id === id; });
@@ -655,7 +773,6 @@ function applyVisibility() {
   updateCount(counts);
 }
 
-// ── Copy links ────────────────────────────────────────────────────────────────
 function copySelectedLinks(type) {
   var ids = Object.keys(selectedIds);
   var lines = [];
