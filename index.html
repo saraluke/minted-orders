@@ -17,6 +17,7 @@
     --status-production: #c4a44a;
     --status-complete: #58634F;
     --msg-color: #c47b4a;
+    --proof-overdue: #b85c5c;
   }
   body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
   header { background: var(--navy); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--pink-dark); }
@@ -78,6 +79,10 @@
   .order-card.s-approved { border-left: 4px solid var(--status-approved); }
   .order-card.s-production { border-left: 4px solid var(--status-production); }
   .order-card.s-complete { border-left: 4px solid var(--status-complete); opacity: 0.5; }
+  .order-card.proof-overdue { border-left: 4px solid var(--proof-overdue) !important; background: #fff8f8; }
+  .badge-overdue { background: var(--proof-overdue); color: white; font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .proof-sent-time { font-size: 0.62rem; color: var(--status-proof); letter-spacing: 0.02em; }
+  .order-card.proof-overdue .proof-sent-time { color: var(--proof-overdue); }
 
   .card-header { padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
   .card-header:hover { background: #fdf9fb; }
@@ -256,11 +261,13 @@ var SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbzrA8RXixGE24MC_CTo-1
 var STATUS_KEY  = 'slc_minted_status';
 var NOTES_KEY   = 'slc_minted_notes';
 var MSG_READ_KEY = 'slc_minted_msg_read'; // stores { orderNum: countSeen }
+var PROOF_TIME_KEY = 'slc_minted_proof_time'; // stores { orderId: timestamp ms }
 
 var ordersData   = [];
 var statusData   = {};
 var notesData    = {};
 var msgReadData  = {}; // { orderNum: countSeen }
+var proofTimeData = {}; // { orderId: timestamp ms }
 var messagesData = {}; // { orderNum: [ {name, text, link}, ... ] }
 var selectedIds  = {};
 var activeFilter = 'pending';
@@ -284,10 +291,10 @@ function scriptURL(params) {
 
 function loadPersistedData(callback) {
   setSyncLabel('Syncing...');
-  var statusDone = false, notesDone = false, msgReadDone = false;
+  var statusDone = false, notesDone = false, msgReadDone = false, proofTimeDone = false;
 
   function checkDone() {
-    if (statusDone && notesDone && msgReadDone) { setSyncLabel('Synced'); callback(); }
+    if (statusDone && notesDone && msgReadDone && proofTimeDone) { setSyncLabel('Synced'); callback(); }
   }
 
   fetch(scriptURL({ action: 'get', key: STATUS_KEY }))
@@ -322,6 +329,17 @@ function loadPersistedData(callback) {
       try { var m = localStorage.getItem(MSG_READ_KEY); if (m) msgReadData = JSON.parse(m); } catch(e) {}
       msgReadDone = true; checkDone();
     });
+
+  fetch(scriptURL({ action: 'get', key: PROOF_TIME_KEY }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.value) { try { proofTimeData = JSON.parse(data.value); } catch(e) { proofTimeData = {}; } }
+      else { proofTimeData = {}; }
+      proofTimeDone = true; checkDone();
+    }).catch(function() {
+      try { var p = localStorage.getItem(PROOF_TIME_KEY); if (p) proofTimeData = JSON.parse(p); } catch(e) {}
+      proofTimeDone = true; checkDone();
+    });
 }
 
 function saveStatus() {
@@ -348,6 +366,13 @@ function saveMsgRead() {
   var val = JSON.stringify(msgReadData);
   try { localStorage.setItem(MSG_READ_KEY, val); } catch(e) {}
   fetch(scriptURL({ action: 'set', key: MSG_READ_KEY, value: val }))
+    .catch(function() {});
+}
+
+function saveProofTime() {
+  var val = JSON.stringify(proofTimeData);
+  try { localStorage.setItem(PROOF_TIME_KEY, val); } catch(e) {}
+  fetch(scriptURL({ action: 'set', key: PROOF_TIME_KEY, value: val }))
     .catch(function() {});
 }
 
@@ -387,6 +412,16 @@ function formatDate(str) {
   var d = new Date(str);
   if (isNaN(d.getTime())) return '';
   return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+}
+
+function formatProofTime(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  var h = d.getHours(), m = d.getMinutes();
+  var ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  var mm = m < 10 ? '0' + m : m;
+  return (d.getMonth()+1) + '/' + d.getDate() + ' at ' + h + ':' + mm + ampm;
 }
 
 function loadMessages(callback) {
@@ -488,7 +523,10 @@ function renderOrders() {
     var note = notesData[o.id] || '';
     var msgs = messagesData[o.orderNum] || [];
     var unread = hasUnreadMessages(o);
+    var proofTs = (st === 'proof') ? (proofTimeData[o.id] || null) : null;
+    var isOverdue = proofTs && (Date.now() - proofTs > 24 * 60 * 60 * 1000);
     var cardClass = 'order-card' + (st ? ' ' + CARD_CLASS[st] : '');
+    if (isOverdue) cardClass += ' proof-overdue';
     if (selectedIds[o.id]) cardClass += ' selected';
 
     html += '<div class="' + cardClass + '" id="card-' + i + '">';
@@ -498,6 +536,8 @@ function renderOrders() {
     html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
     if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
     if (st) html += '<span><span class="status-badge ' + STATUS_BADGE[st] + '">' + STATUS_LABELS[st] + '</span></span>';
+    if (proofTs) html += '<span class="proof-sent-time">sent ' + formatProofTime(proofTs) + '</span>';
+    if (isOverdue) html += '<span><span class="badge-overdue">24h passed</span></span>';
     if (unread) html += '<span><span class="badge-msg">✉ ' + msgs.length + ' message' + (msgs.length !== 1 ? 's' : '') + '</span></span>';
     if (o.slipUrl) html += '<span><span class="badge badge-slip">✓ Slip</span></span>';
     if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
@@ -675,10 +715,20 @@ function setOrderStatus(i, status) {
 
 function applyStatus(ids, status) {
   ids.forEach(function(id) {
-    if (status === '') { delete statusData[id]; }
-    else { statusData[id] = status; }
+    if (status === '') {
+      delete statusData[id];
+      delete proofTimeData[id];
+    } else {
+      statusData[id] = status;
+      if (status === 'proof') {
+        proofTimeData[id] = Date.now(); // reset timestamp each time proof is sent
+      } else {
+        delete proofTimeData[id];
+      }
+    }
   });
   saveStatus();
+  saveProofTime();
 }
 
 function bulkSetStatus(status) {
