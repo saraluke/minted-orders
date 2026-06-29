@@ -556,7 +556,9 @@ function renderOrders() {
       html += '</div>';
       html += '<div class="messages-panel" id="msg-panel-' + i + '">';
       html += '<div class="messages-scroll">';
-      msgs.forEach(function(m) {
+      // REVERSED: newest messages first
+      var msgsReversed = msgs.slice().reverse();
+      msgsReversed.forEach(function(m) {
         html += '<div class="message-item">';
         html += '<div class="message-item-meta">';
         html += '<span class="message-item-from">' + esc(m.name || 'Customer') + '</span>';
@@ -635,7 +637,22 @@ function toggleMessages(i) {
   }
 }
 
-function toggleCard(i) { document.getElementById('card-' + i).classList.toggle('open'); }
+function toggleCard(i) {
+  var card = document.getElementById('card-' + i);
+  var wasOpen = card.classList.contains('open');
+  card.classList.toggle('open');
+  
+  // If opening the card (wasn't open before) and it has unread messages, auto-open messages panel
+  if (!wasOpen && card.classList.contains('open')) {
+    var o = ordersData[i];
+    if (hasUnreadMessages(o)) {
+      var panel = document.getElementById('msg-panel-' + i);
+      if (panel && !panel.classList.contains('open')) {
+        toggleMessages(i);
+      }
+    }
+  }
+}
 
 function toggleSelect(e, i) {
   e.stopPropagation();
