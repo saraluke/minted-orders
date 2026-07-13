@@ -289,6 +289,44 @@ function scriptURL(params) {
   return parts.join('');
 }
 
+// Saves go through a hidden iframe form POST instead of a GET fetch.
+// GET puts the entire JSON payload in the URL, which Google rejects (400)
+// once the data grows past the URL length limit. Form POST has no such
+// limit and, because it targets an iframe, never triggers a CORS preflight.
+function postToScript(key, value, onDone) {
+  var frameName = 'post-frame-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
+  var iframe = document.createElement('iframe');
+  iframe.name = frameName;
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = SCRIPT_URL;
+  form.target = frameName;
+  form.style.display = 'none';
+
+  var fields = { action: 'set', key: key, value: value };
+  for (var k in fields) {
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = k;
+    input.value = fields[k];
+    form.appendChild(input);
+  }
+  document.body.appendChild(form);
+
+  iframe.onload = function() {
+    if (onDone) onDone();
+    setTimeout(function() {
+      if (form.parentNode) form.parentNode.removeChild(form);
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }, 500);
+  };
+
+  form.submit();
+}
+
 function loadPersistedData(callback) {
   setSyncLabel('Syncing...');
   var statusDone = false, notesDone = false, msgReadDone = false, proofTimeDone = false;
@@ -346,34 +384,26 @@ function saveStatus() {
   var val = JSON.stringify(statusData);
   try { localStorage.setItem(STATUS_KEY, val); } catch(e) {}
   setSyncLabel('Saving...');
-  fetch(scriptURL({ action: 'set', key: STATUS_KEY, value: val }))
-    .then(function(r) { return r.json(); })
-    .then(function() { setSyncLabel('Saved'); })
-    .catch(function() { setSyncLabel('Saved locally'); });
+  postToScript(STATUS_KEY, val, function() { setSyncLabel('Saved'); });
 }
 
 function saveNotes() {
   var val = JSON.stringify(notesData);
   try { localStorage.setItem(NOTES_KEY, val); } catch(e) {}
   setSyncLabel('Saving...');
-  fetch(scriptURL({ action: 'set', key: NOTES_KEY, value: val }))
-    .then(function(r) { return r.json(); })
-    .then(function() { setSyncLabel('Saved'); })
-    .catch(function() { setSyncLabel('Saved locally'); });
+  postToScript(NOTES_KEY, val, function() { setSyncLabel('Saved'); });
 }
 
 function saveMsgRead() {
   var val = JSON.stringify(msgReadData);
   try { localStorage.setItem(MSG_READ_KEY, val); } catch(e) {}
-  fetch(scriptURL({ action: 'set', key: MSG_READ_KEY, value: val }))
-    .catch(function() {});
+  postToScript(MSG_READ_KEY, val, null);
 }
 
 function saveProofTime() {
   var val = JSON.stringify(proofTimeData);
   try { localStorage.setItem(PROOF_TIME_KEY, val); } catch(e) {}
-  fetch(scriptURL({ action: 'set', key: PROOF_TIME_KEY, value: val }))
-    .catch(function() {});
+  postToScript(PROOF_TIME_KEY, val, null);
 }
 
 // ── Sheet loading ─────────────────────────────────────────────────────────────
@@ -641,7 +671,7 @@ function toggleCard(i) {
   var card = document.getElementById('card-' + i);
   var wasOpen = card.classList.contains('open');
   card.classList.toggle('open');
-  
+
   // If opening the card (wasn't open before) and it has unread messages, auto-open messages panel
   if (!wasOpen && card.classList.contains('open')) {
     var o = ordersData[i];
