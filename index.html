@@ -956,6 +956,14 @@ function applyVisibility() {
     var matchesNote = !noteQuery || note.indexOf(noteQuery) !== -1;
     card.classList.toggle('hidden', !(matchesStatus && matchesNote));
   });
+  
+  // Hide empty SKU subsections
+  var skuSubs = document.querySelectorAll('.sku-subsection');
+  skuSubs.forEach(function(sub) {
+    var visibleCards = sub.querySelectorAll('.order-card:not(.hidden)');
+    sub.classList.toggle('hidden', visibleCards.length === 0);
+  });
+  
   updateCount(counts);
 }
 
