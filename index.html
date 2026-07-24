@@ -275,6 +275,80 @@ var NOTES_KEY   = 'slc_minted_notes';
 var MSG_READ_KEY = 'slc_minted_msg_read'; // stores { orderNum: countSeen }
 var PROOF_TIME_KEY = 'slc_minted_proof_time'; // stores { orderId: timestamp ms }
 
+// SKU corrections: maps incorrect SKU -> correct design name for display & sorting
+var SKU_CORRECTIONS = {
+  'S25668': 'songbird-address-wood',
+  'S25752': 'whitmore-wood',
+  'S25716': 'landingham-wood',
+  'S25669': 'wesley-wood',
+  'S25751': 'serafina',
+  'S25746': 'perkins',
+  'S25680': 'patel-wood',
+  'S25710': 'Hearts-4-wood',
+  'S25740': 'hearts-wendy-wood',
+  'S25701': 'bellum-wood',
+  'S25695': 'bellum-heart-wood',
+  'S25679': 'hummingbird-wood',
+  'S25691': 'cohen-wood',
+  'S25690': 'serena-wood',
+  '89786': 'reindeer-up-wood',
+  '89784': 'reindeer-wood',
+  '89785': 'snowflake-seal-wood',
+  'S25708': 'claire-bows-wood',
+  'S25722': 'goodall-wood',
+  'S25729': 'schofield-wood',
+  'S25675': 'Johannessen-wood',
+  'S25721': 'swenson-wood',
+  'S25665': 'bellum-future-wood',
+  'S25681': 'greenwich-wood',
+  'S25728': 'Amundson-wood',
+  'S25730': 'forest-hill-future-wood',
+  'S25662': 'hazel-chase-wood',
+  'S25678': 'martinez-wood',
+  'S25750': 'kinsey-wood',
+  'S25733': 'alexander-wood',
+  'S25672': 'marcus-lister-wood',
+  'S25747': 'irons-wood',
+  'S25736': 'Edward-wood',
+  'S25738': 'castellano-wood',
+  'S25661': 'callie-braden-wood',
+  'S25654': 'rowland-wood',
+  'S25735': 'foster-wood',
+  'S25743': 'kenzie-wood',
+  'S25684': 'sinclair-wood',
+  'S25682': 'bristol-wood',
+  'S25749': 'jenkins-wood',
+  'S25687': 'collins-wood',
+  'S25698': 'carpenter-wood',
+  'S25727': 'mcmann-wood',
+  'S25658': 'chelsea-wood',
+  'S25732': 'forest-hill-lower-wood',
+  '444': 'ellen-barrett-wood',
+  'S25694': 'Robertson-wood',
+  'S25748': 'aurora-brown-wood',
+  'S16134': 'abstract-pines-wood',
+  'S25666': 'smith-wood',
+  'S25670': 'caldwell-wood',
+  'S25660': 'jennifer-blake-wood',
+  'S25686': 'jacob-lily-wood',
+  'S25734': 'eleanor-wood',
+  'S25725': 'bethany-starling-wood',
+  'S25659': 'landyn-wood',
+  'S25688': 'hannah-wood',
+  'S25705': 'Jayden-White-wood',
+  'S25706': 'elijah-grace-wood',
+  'S25717': 'flemming-wood',
+  'S25724': 'consuelos-wood',
+  'S25726': 'Hannah-wood',
+  'S25712': 'Maxwell-wood',
+  'S25667': 'tennessee-modern-wood',
+  'S25741': 'crawford-wood',
+  'S25677': 'shepherd-wood',
+  'S25720': 'brooklyn-wood',
+  'S25715': 'lanford-wood',
+  'S25696': 'dalton-wood'
+};
+
 var ordersData   = [];
 var statusData   = {};
 var notesData    = {};
@@ -467,6 +541,10 @@ function formatProofTime(ts) {
   return (d.getMonth()+1) + '/' + d.getDate() + ' at ' + h + ':' + mm + ampm;
 }
 
+function applySKUCorrection(design) {
+  return SKU_CORRECTIONS[design] || design;
+}
+
 function getSkuCategory(sku) {
   if (!sku) return 'default';
   var lower = sku.toLowerCase();
@@ -517,12 +595,14 @@ function loadOrders() {
         rows.forEach(function(row, i) {
           var name = (row[0] || '').trim();
           if (!name || name === 'NAME') return;
+          var design = (row[1] || '').trim();
+          design = applySKUCorrection(design); // Apply correction here
           var orderNum = (row[6] || '').trim();
           var id = orderNum || ('row-' + i);
           ordersData.push({
             id: id,
             name: name,
-            design: (row[1] || '').trim(),
+            design: design,
             orderLink: (row[2] || '').trim(),
             pers: (row[3] || '').trim(),
             filePath: (row[4] || '').trim(),
