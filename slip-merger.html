@@ -51,6 +51,9 @@
   .btn-clear:hover { border-color: var(--pink-dark); color: var(--pink-dark); }
 
   .url-count { font-size: 0.7rem; color: var(--muted); }
+  .stamp-status { font-size: 0.68rem; color: var(--green); font-weight: 600; display: none; align-items: center; gap: 5px; }
+  .stamp-status.visible { display: inline-flex; }
+  .stamp-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
 
   .log { margin-top: 20px; }
   .log-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.72rem; }
@@ -85,12 +88,13 @@
 <div class="main">
   <div class="card">
     <h2>Paste Slip Links</h2>
-    <p>Copy slip links from your order dashboard, then paste them here — one per line. Click Merge to combine them into a single PDF for printing.</p>
-    <textarea id="url-input" placeholder="https://dl.dropboxusercontent.com/...&#10;https://dl.dropboxusercontent.com/...&#10;https://dl.dropboxusercontent.com/..." oninput="updateCount()"></textarea>
+    <p>Copy slip links from your order dashboard, then paste them here — one per line. Click Merge to combine them into a single PDF for printing. When opened via "Copy Slip Links" on the dashboard, each slip is automatically stamped with its type and private note.</p>
+    <textarea id="url-input" placeholder="https://dl.dropboxusercontent.com/...&#10;https://dl.dropboxusercontent.com/...&#10;https://dl.dropboxusercontent.com/..." oninput="onUrlsEdited()"></textarea>
     <div class="btn-row">
       <button class="btn btn-primary" id="merge-btn" onclick="mergeSlips()">⬡ Merge PDFs</button>
       <button class="btn btn-clear" onclick="clearAll()">Clear</button>
       <span class="url-count" id="url-count"></span>
+      <span class="stamp-status" id="stamp-status"><span class="stamp-status-dot"></span><span id="stamp-status-text"></span></span>
     </div>
     <div class="error-banner" id="error-banner"></div>
   </div>
@@ -109,10 +113,37 @@
 var mergedPdfBytes = null;
 var downloadFilename = '';
 
+// Map of raw slip URL -> stamp text ("Type — private note"), populated from the
+// dashboard's "Copy Slip Links" handoff. Keyed by the exact URL string as pasted/loaded,
+// so re-ordering or re-pasting lines doesn't break the association.
+var slipStampMap = {};
+var SLIP_MERGE_PAYLOAD_KEY = 'slc_slip_merge_payload';
+var SLIP_MERGE_PAYLOAD_MAX_AGE_MS = 10 * 60 * 1000; // ignore stale handoffs older than 10 min
+
 function updateCount() {
   var urls = getUrls();
   var el = document.getElementById('url-count');
   el.textContent = urls.length > 0 ? urls.length + ' link' + (urls.length !== 1 ? 's' : '') : '';
+  updateStampStatus(urls);
+}
+
+function updateStampStatus(urls) {
+  urls = urls || getUrls();
+  var stampedCount = urls.filter(function(u) { return !!slipStampMap[u]; }).length;
+  var el = document.getElementById('stamp-status');
+  var textEl = document.getElementById('stamp-status-text');
+  if (stampedCount > 0) {
+    textEl.textContent = stampedCount + ' of ' + urls.length + ' will be stamped with type/note';
+    el.classList.add('visible');
+  } else {
+    el.classList.remove('visible');
+  }
+}
+
+// When the textarea is hand-edited, stamp associations only survive for URLs that are
+// still present verbatim — newly typed/pasted URLs simply merge without a stamp.
+function onUrlsEdited() {
+  updateCount();
 }
 
 function getUrls() {
@@ -126,6 +157,7 @@ function clearAll() {
   document.getElementById('result').classList.remove('visible');
   document.getElementById('error-banner').classList.remove('visible');
   document.getElementById('log').innerHTML = '';
+  slipStampMap = {};
   updateCount();
   mergedPdfBytes = null;
 }
@@ -163,6 +195,56 @@ function normalizeDropboxUrl(url) {
   return PROXY_URL + '?url=' + encodeURIComponent(url);
 }
 
+// Wrap stamp text to fit within maxWidth, returning an array of lines
+function wrapStampText(font, text, size, maxWidth) {
+  var words = text.split(' ');
+  var lines = [];
+  var current = '';
+  words.forEach(function(w) {
+    var test = current ? current + ' ' + w : w;
+    var width = font.widthOfTextAtSize(test, size);
+    if (width > maxWidth && current) {
+      lines.push(current);
+      current = w;
+    } else {
+      current = test;
+    }
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+
+// Draws a light banner with the stamp text across the top of a page
+function stampPage(page, stampText, font) {
+  if (!stampText) return;
+  var size = page.getSize();
+  var fontSize = 9;
+  var margin = 14;
+  var lineHeight = fontSize * 1.5;
+  var maxWidth = size.width - margin * 2;
+  var lines = wrapStampText(font, stampText, fontSize, maxWidth);
+  var boxHeight = lines.length * lineHeight + 10;
+
+  page.drawRectangle({
+    x: 0,
+    y: size.height - boxHeight,
+    width: size.width,
+    height: boxHeight,
+    color: PDFLib.rgb(0.953, 0.831, 0.871), // pink-light
+    opacity: 0.9
+  });
+
+  lines.forEach(function(line, idx) {
+    page.drawText(line, {
+      x: margin,
+      y: size.height - 12 - (idx + 1) * lineHeight + (lineHeight - fontSize),
+      size: fontSize,
+      font: font,
+      color: PDFLib.rgb(0.224, 0.263, 0.314) // navy
+    });
+  });
+}
+
 async function mergeSlips() {
   var urls = getUrls();
   if (urls.length === 0) {
@@ -183,6 +265,7 @@ async function mergeSlips() {
 
   try {
     var mergedPdf = await PDFLib.PDFDocument.create();
+    var stampFont = await mergedPdf.embedFont(PDFLib.StandardFonts.Helvetica);
     var successCount = 0;
     var failCount = 0;
 
@@ -191,6 +274,7 @@ async function mergeSlips() {
     for (var i = 0; i < urls.length; i++) {
       var rawUrl = urls[i];
       var url = normalizeDropboxUrl(rawUrl);
+      var stampText = slipStampMap[rawUrl] || '';
       var label = 'Slip ' + (i + 1) + ' of ' + urls.length;
       var logId = addLog(label + ' — fetching...', 'loading');
 
@@ -206,9 +290,13 @@ async function mergeSlips() {
         var bytes = await resp.arrayBuffer();
         var pdf = await PDFLib.PDFDocument.load(bytes);
         var pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-        pages.forEach(function(p) { mergedPdf.addPage(p); });
+        pages.forEach(function(p) {
+          if (stampText) stampPage(p, stampText, stampFont);
+          mergedPdf.addPage(p);
+        });
         successCount++;
-        updateLog(logId, label + ' — ✓ added (' + pdf.getPageCount() + ' page' + (pdf.getPageCount() !== 1 ? 's' : '') + ')', 'ok');
+        var stampNote = stampText ? ', stamped' : '';
+        updateLog(logId, label + ' — ✓ added (' + pdf.getPageCount() + ' page' + (pdf.getPageCount() !== 1 ? 's' : '') + stampNote + ')', 'ok');
       } catch(e) {
         failCount++;
         updateLog(logId, label + ' — ✗ failed: ' + e.message, 'error');
@@ -248,17 +336,42 @@ function triggerDownload() {
   document.body.removeChild(a);
 }
 
-updateCount();
+// Load slip URLs + stamp text handed off from the dashboard's "Copy Slip Links" button.
+// Falls back to the older ?urls= query param (plain URLs, no stamps) for backward compatibility.
+function loadHandoff() {
+  try {
+    var raw = localStorage.getItem(SLIP_MERGE_PAYLOAD_KEY);
+    if (raw) {
+      var payload = JSON.parse(raw);
+      var fresh = payload.ts && (Date.now() - payload.ts) < SLIP_MERGE_PAYLOAD_MAX_AGE_MS;
+      if (fresh && payload.records && payload.records.length) {
+        slipStampMap = {};
+        var urls = [];
+        payload.records.forEach(function(r) {
+          if (!r.url) return;
+          urls.push(r.url);
+          if (r.stamp) slipStampMap[r.url] = r.stamp;
+        });
+        document.getElementById('url-input').value = urls.join('\n');
+        localStorage.removeItem(SLIP_MERGE_PAYLOAD_KEY); // one-time use, avoid stale reload
+        updateCount();
+        return;
+      }
+      // Stale — clear it out so it doesn't linger and confuse a future load
+      localStorage.removeItem(SLIP_MERGE_PAYLOAD_KEY);
+    }
+  } catch(e) {}
 
-// Auto-populate from URL parameter if present
-(function() {
+  // Fallback: old-style ?urls= query param, no stamps
   var params = new URLSearchParams(window.location.search);
   var urls = params.get('urls');
   if (urls) {
     document.getElementById('url-input').value = decodeURIComponent(urls);
-    updateCount();
   }
-})();
+  updateCount();
+}
+
+loadHandoff();
 </script>
 </body>
 </html>
