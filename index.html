@@ -612,6 +612,13 @@ function getEffectiveSkuCategory(o) {
   return skuOverrideData[o.id] || getSkuCategory(o.design);
 }
 
+// Combined "Type — private note" text stamped onto each delivery slip PDF by the merger tool
+function buildSlipStampText(o) {
+  var type = TYPE_LABELS[getEffectiveSkuCategory(o)] || '';
+  var note = (privateNotesData[o.id] || '').trim();
+  return note ? (type + '  —  ' + note) : type;
+}
+
 function loadMessages(callback) {
   var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=' + SHEET2_GID;
   fetch(url).then(function(res) {
@@ -1151,38 +1158,52 @@ function applyVisibility() {
   updateCount(counts);
 }
 
+var SLIP_MERGE_PAYLOAD_KEY = 'slc_slip_merge_payload';
+
 function copySelectedLinks(type) {
   var ids = Object.keys(selectedIds);
-  var lines = [];
-  ids.forEach(function(id) {
-    var o = ordersData.find(function(x) { return x.id === id; });
-    if (!o) return;
-    var url = type === 'msg' ? o.msgLink : type === 'slip' ? o.slipUrl : o.orderLink;
-    if (url) lines.push(url);
-  });
-  if (!lines.length) return;
-  var text = lines.join('\n');
   var btnId = type === 'msg' ? 'copy-msg-links-btn' : type === 'slip' ? 'copy-slips-btn' : 'copy-links-btn';
 
   if (type === 'slip') {
-    var encoded = encodeURIComponent(text);
-    window.open('slip-merger.html?urls=' + encoded, '_blank');
+    // Hand off url + stamp text (Type + Private Note) per order via localStorage, rather than
+    // a plain URL query string — this avoids URL length limits and lets the merger tool
+    // stamp each slip with the right text automatically.
+    var records = [];
+    ids.forEach(function(id) {
+      var o = ordersData.find(function(x) { return x.id === id; });
+      if (o && o.slipUrl) records.push({ url: o.slipUrl, stamp: buildSlipStampText(o) });
+    });
+    if (!records.length) return;
+    try {
+      localStorage.setItem(SLIP_MERGE_PAYLOAD_KEY, JSON.stringify({ ts: Date.now(), records: records }));
+    } catch(e) {}
+    window.open('slip-merger.html', '_blank');
     var btn = document.getElementById(btnId);
     if (btn) {
       var orig = btn.textContent;
       btn.textContent = '✓ Opening Merger...';
       setTimeout(function() { btn.textContent = orig; }, 2000);
     }
-  } else {
-    copyToClipboard(text, function() {
-      var btn = document.getElementById(btnId);
-      if (btn) {
-        var orig = btn.textContent;
-        btn.textContent = '✓ ' + lines.length + ' Links Copied!';
-        setTimeout(function() { btn.textContent = orig; }, 2000);
-      }
-    });
+    return;
   }
+
+  var lines = [];
+  ids.forEach(function(id) {
+    var o = ordersData.find(function(x) { return x.id === id; });
+    if (!o) return;
+    var url = type === 'msg' ? o.msgLink : o.orderLink;
+    if (url) lines.push(url);
+  });
+  if (!lines.length) return;
+  var text = lines.join('\n');
+  copyToClipboard(text, function() {
+    var btn = document.getElementById(btnId);
+    if (btn) {
+      var orig = btn.textContent;
+      btn.textContent = '✓ ' + lines.length + ' Links Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 2000);
+    }
+  });
 }
 
 function copyToClipboard(text, callback) {
