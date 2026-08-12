@@ -94,6 +94,7 @@
   .badge { font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   .badge-design { background: #faeef2; color: var(--pink-dark); }
   .badge-slip { background: #eef3ea; color: var(--green); }
+  .badge-note { background: var(--proof-overdue); color: white; display: inline-flex; align-items: center; gap: 4px; cursor: help; }
   .badge-msg { background: var(--msg-color); color: white; font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px; animation: msg-pulse 2s ease-in-out infinite; }
   @keyframes msg-pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
   .status-badge { font-size: 0.6rem; padding: 2px 9px; border-radius: 20px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: white; }
@@ -133,6 +134,17 @@
   .note-input:focus { outline: none; border-color: var(--status-production); }
   .note-save-btn { background: var(--status-production); color: white; border: none; border-radius: 4px; padding: 7px 14px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
   .note-save-btn:hover { opacity: 0.85; }
+
+  /* ── Private note ── */
+  .private-note-area { margin-top: 10px; }
+  .private-note-input { flex: 1; border: 1px solid #e0c0c5; border-radius: 4px; padding: 7px 10px; font-family: 'Montserrat', sans-serif; font-size: 0.75rem; color: var(--text); background: #fdf6f7; }
+  .private-note-input:focus { outline: none; border-color: var(--proof-overdue); }
+  .private-note-save-btn { background: var(--proof-overdue); color: white; border: none; border-radius: 4px; padding: 7px 14px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+  .private-note-save-btn:hover { opacity: 0.85; }
+
+  /* ── Type dropdown ── */
+  .type-select { border: 1px solid var(--border); border-radius: 4px; padding: 7px 10px; font-family: 'Montserrat', sans-serif; font-size: 0.75rem; color: var(--text); background: white; cursor: pointer; }
+  .type-select:focus { outline: none; border-color: var(--status-approved); }
 
   .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
   .btn { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; white-space: nowrap; }
@@ -274,6 +286,8 @@ var STATUS_KEY  = 'slc_minted_status';
 var NOTES_KEY   = 'slc_minted_notes';
 var MSG_READ_KEY = 'slc_minted_msg_read'; // stores { orderNum: countSeen }
 var PROOF_TIME_KEY = 'slc_minted_proof_time'; // stores { orderId: timestamp ms }
+var PRIVATE_NOTE_KEY = 'slc_minted_private_notes'; // stores { orderId: noteText } — private, always visible
+var SKU_OVERRIDE_KEY = 'slc_minted_sku_override'; // stores { orderId: 'default'|'wood'|'emboss' } — manual type override
 
 // SKU corrections: maps incorrect SKU -> correct design name for display & sorting
 var SKU_CORRECTIONS = {
@@ -355,6 +369,8 @@ var statusData   = {};
 var notesData    = {};
 var msgReadData  = {}; // { orderNum: countSeen }
 var proofTimeData = {}; // { orderId: timestamp ms }
+var privateNotesData = {}; // { orderId: noteText }
+var skuOverrideData  = {}; // { orderId: 'default'|'wood'|'emboss' }
 var messagesData = {}; // { orderNum: [ {name, text, link}, ... ] }
 var selectedIds  = {};
 var activeFilter = 'pending';
@@ -417,10 +433,11 @@ function postToScript(key, value, onDone) {
 
 function loadPersistedData(callback) {
   setSyncLabel('Syncing...');
-  var statusDone = false, notesDone = false, msgReadDone = false, proofTimeDone = false;
+  var statusDone = false, notesDone = false, msgReadDone = false, proofTimeDone = false,
+      privateNoteDone = false, skuOverrideDone = false;
 
   function checkDone() {
-    if (statusDone && notesDone && msgReadDone && proofTimeDone) { setSyncLabel('Synced'); callback(); }
+    if (statusDone && notesDone && msgReadDone && proofTimeDone && privateNoteDone && skuOverrideDone) { setSyncLabel('Synced'); callback(); }
   }
 
   fetch(scriptURL({ action: 'get', key: STATUS_KEY }))
@@ -466,6 +483,28 @@ function loadPersistedData(callback) {
       try { var p = localStorage.getItem(PROOF_TIME_KEY); if (p) proofTimeData = JSON.parse(p); } catch(e) {}
       proofTimeDone = true; checkDone();
     });
+
+  fetch(scriptURL({ action: 'get', key: PRIVATE_NOTE_KEY }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.value) { try { privateNotesData = JSON.parse(data.value); } catch(e) { privateNotesData = {}; } }
+      else { privateNotesData = {}; }
+      privateNoteDone = true; checkDone();
+    }).catch(function() {
+      try { var pn = localStorage.getItem(PRIVATE_NOTE_KEY); if (pn) privateNotesData = JSON.parse(pn); } catch(e) {}
+      privateNoteDone = true; checkDone();
+    });
+
+  fetch(scriptURL({ action: 'get', key: SKU_OVERRIDE_KEY }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.value) { try { skuOverrideData = JSON.parse(data.value); } catch(e) { skuOverrideData = {}; } }
+      else { skuOverrideData = {}; }
+      skuOverrideDone = true; checkDone();
+    }).catch(function() {
+      try { var so = localStorage.getItem(SKU_OVERRIDE_KEY); if (so) skuOverrideData = JSON.parse(so); } catch(e) {}
+      skuOverrideDone = true; checkDone();
+    });
 }
 
 function saveStatus() {
@@ -492,6 +531,20 @@ function saveProofTime() {
   var val = JSON.stringify(proofTimeData);
   try { localStorage.setItem(PROOF_TIME_KEY, val); } catch(e) {}
   postToScript(PROOF_TIME_KEY, val, null);
+}
+
+function savePrivateNotes() {
+  var val = JSON.stringify(privateNotesData);
+  try { localStorage.setItem(PRIVATE_NOTE_KEY, val); } catch(e) {}
+  setSyncLabel('Saving...');
+  postToScript(PRIVATE_NOTE_KEY, val, function() { setSyncLabel('Saved'); });
+}
+
+function saveSkuOverride() {
+  var val = JSON.stringify(skuOverrideData);
+  try { localStorage.setItem(SKU_OVERRIDE_KEY, val); } catch(e) {}
+  setSyncLabel('Saving...');
+  postToScript(SKU_OVERRIDE_KEY, val, function() { setSyncLabel('Saved'); });
 }
 
 // ── Sheet loading ─────────────────────────────────────────────────────────────
@@ -552,6 +605,18 @@ function getSkuCategory(sku) {
   if (lower.endsWith('-wood')) return 'wood';
   if (lower.endsWith('-emboss')) return 'emboss';
   return 'default';
+}
+
+// Effective category = manual override (if she's changed it) falling back to the auto SKU-based detection
+function getEffectiveSkuCategory(o) {
+  return skuOverrideData[o.id] || getSkuCategory(o.design);
+}
+
+// Combined "Type — private note" text stamped onto each delivery slip PDF by the merger tool
+function buildSlipStampText(o) {
+  var type = TYPE_LABELS[getEffectiveSkuCategory(o)] || '';
+  var note = (privateNotesData[o.id] || '').trim();
+  return note ? (type + '  —  ' + note) : type;
 }
 
 function loadMessages(callback) {
@@ -646,14 +711,17 @@ function hasUnreadMessages(o) {
 var STATUS_LABELS = { proof: 'Proof Sent', 'proof-complete': 'Proof Ready', approved: 'Approved', production: 'In Production', complete: 'Complete' };
 var STATUS_BADGE  = { proof: 'sb-proof', 'proof-complete': 'sb-proof-complete', approved: 'sb-approved', production: 'sb-production', complete: 'sb-complete' };
 var CARD_CLASS    = { proof: 's-proof', 'proof-complete': 's-proof-complete', approved: 's-approved', production: 's-production', complete: 's-complete' };
+var TYPE_LABELS   = { default: 'Self-Inking', wood: 'Wood Block', emboss: 'Embosser' };
 
 function renderOrderCard(o, i) {
   var st = statusData[o.id] || '';
   var note = notesData[o.id] || '';
+  var privateNote = privateNotesData[o.id] || '';
   var msgs = messagesData[o.orderNum] || [];
   var unread = hasUnreadMessages(o);
   var proofTs = (st === 'proof') ? (proofTimeData[o.id] || null) : null;
   var isOverdue = proofTs && (Date.now() - proofTs > 24 * 60 * 60 * 1000);
+  var effectiveType = getEffectiveSkuCategory(o);
   var cardClass = 'order-card' + (st ? ' ' + CARD_CLASS[st] : '');
   if (isOverdue) cardClass += ' proof-overdue';
   if (selectedIds[o.id]) cardClass += ' selected';
@@ -668,6 +736,7 @@ function renderOrderCard(o, i) {
   if (proofTs) html += '<span class="proof-sent-time">sent ' + formatProofTime(proofTs) + '</span>';
   if (isOverdue) html += '<span><span class="badge-overdue">24h passed</span></span>';
   if (unread) html += '<span><span class="badge-msg">✉ ' + msgs.length + ' message' + (msgs.length !== 1 ? 's' : '') + '</span></span>';
+  if (privateNote) html += '<span><span class="badge badge-note" title="' + esc(privateNote) + '">● Note</span></span>';
   if (o.slipUrl) html += '<span><span class="badge badge-slip">✓ Slip</span></span>';
   if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
   if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
@@ -707,6 +776,14 @@ function renderOrderCard(o, i) {
     html += '<div class="section-label">File Path</div>';
     html += '<div class="file-path">' + esc(o.filePath) + '</div>';
   }
+
+  html += '<div class="section-label">Type</div>';
+  html += '<select class="type-select" id="type-select-' + i + '" onchange="setSkuOverride(' + i + ', this.value)">';
+  ['default','wood','emboss'].forEach(function(cat) {
+    html += '<option value="' + cat + '"' + (effectiveType === cat ? ' selected' : '') + '>' + TYPE_LABELS[cat] + '</option>';
+  });
+  html += '</select>';
+
   html += '<div class="production-note-area">';
   html += '<div class="production-note-display' + (note ? ' visible' : '') + '" id="note-display-' + i + '">Production note: ' + esc(note) + '</div>';
   if (st === 'production') {
@@ -715,6 +792,14 @@ function renderOrderCard(o, i) {
     html += '<button class="note-save-btn" onclick="saveNoteInline(' + i + ')">Save</button>';
     html += '</div>';
   }
+  html += '</div>';
+
+  html += '<div class="private-note-area">';
+  html += '<div class="section-label">Private Note</div>';
+  html += '<div class="note-edit-row">';
+  html += '<input class="private-note-input" id="private-note-input-' + i + '" placeholder="Add a private note (only visible to you)..." value="' + esc(privateNote) + '">';
+  html += '<button class="private-note-save-btn" onclick="savePrivateNoteInline(' + i + ')">Save</button>';
+  html += '</div>';
   html += '</div>';
 
   html += '<div class="actions">';
@@ -759,10 +844,10 @@ function renderOrders() {
     if (!orders || orders.length === 0) return;
 
     if (status === 'approved') {
-      // Group approved orders by SKU category
+      // Group approved orders by effective SKU category (manual override wins over auto-detection)
       var bySkuCat = { default: [], wood: [], emboss: [] };
       orders.forEach(function(item) {
-        var cat = getSkuCategory(item.order.design);
+        var cat = getEffectiveSkuCategory(item.order);
         bySkuCat[cat].push(item);
       });
 
@@ -811,6 +896,14 @@ function toggleSkuSubsection(category) {
   if (sub) {
     sub.classList.toggle('open');
   }
+}
+
+function setSkuOverride(i, value) {
+  var o = ordersData[i];
+  skuOverrideData[o.id] = value;
+  saveSkuOverride();
+  // Re-render so the order moves into the right subsection if it's Approved
+  renderOrders();
 }
 
 function toggleMessages(i) {
@@ -1009,6 +1102,21 @@ function saveNoteInline(i) {
   if (btn) { var orig = btn.textContent; btn.textContent = '✓ Saved'; setTimeout(function() { btn.textContent = orig; }, 1500); }
 }
 
+function savePrivateNoteInline(i) {
+  var o = ordersData[i];
+  var input = document.getElementById('private-note-input-' + i);
+  if (!input) return;
+  var note = input.value.trim();
+  privateNotesData[o.id] = note;
+  savePrivateNotes();
+  var btn = input.parentElement ? input.parentElement.querySelector('.private-note-save-btn') : null;
+  if (btn) { var orig = btn.textContent; btn.textContent = '✓ Saved'; setTimeout(function() { btn.textContent = orig; }, 1500); }
+  // Re-render so the "● Note" badge in the card header reflects the change
+  renderOrders();
+  var card = document.getElementById('card-' + i);
+  if (card) card.classList.add('open');
+}
+
 function setFilter(f) {
   activeFilter = f;
   document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -1035,7 +1143,8 @@ function applyVisibility() {
     else counts.pending++;
     var matchesStatus = activeFilter === 'all' || (activeFilter === 'pending' && !st) || activeFilter === st;
     var note = (notesData[o.id] || '').toLowerCase();
-    var matchesNote = !noteQuery || note.indexOf(noteQuery) !== -1;
+    var privateNote = (privateNotesData[o.id] || '').toLowerCase();
+    var matchesNote = !noteQuery || note.indexOf(noteQuery) !== -1 || privateNote.indexOf(noteQuery) !== -1;
     card.classList.toggle('hidden', !(matchesStatus && matchesNote));
   });
   
@@ -1049,38 +1158,52 @@ function applyVisibility() {
   updateCount(counts);
 }
 
+var SLIP_MERGE_PAYLOAD_KEY = 'slc_slip_merge_payload';
+
 function copySelectedLinks(type) {
   var ids = Object.keys(selectedIds);
-  var lines = [];
-  ids.forEach(function(id) {
-    var o = ordersData.find(function(x) { return x.id === id; });
-    if (!o) return;
-    var url = type === 'msg' ? o.msgLink : type === 'slip' ? o.slipUrl : o.orderLink;
-    if (url) lines.push(url);
-  });
-  if (!lines.length) return;
-  var text = lines.join('\n');
   var btnId = type === 'msg' ? 'copy-msg-links-btn' : type === 'slip' ? 'copy-slips-btn' : 'copy-links-btn';
 
   if (type === 'slip') {
-    var encoded = encodeURIComponent(text);
-    window.open('slip-merger.html?urls=' + encoded, '_blank');
+    // Hand off url + stamp text (Type + Private Note) per order via localStorage, rather than
+    // a plain URL query string — this avoids URL length limits and lets the merger tool
+    // stamp each slip with the right text automatically.
+    var records = [];
+    ids.forEach(function(id) {
+      var o = ordersData.find(function(x) { return x.id === id; });
+      if (o && o.slipUrl) records.push({ url: o.slipUrl, stamp: buildSlipStampText(o) });
+    });
+    if (!records.length) return;
+    try {
+      localStorage.setItem(SLIP_MERGE_PAYLOAD_KEY, JSON.stringify({ ts: Date.now(), records: records }));
+    } catch(e) {}
+    window.open('slip-merger.html', '_blank');
     var btn = document.getElementById(btnId);
     if (btn) {
       var orig = btn.textContent;
       btn.textContent = '✓ Opening Merger...';
       setTimeout(function() { btn.textContent = orig; }, 2000);
     }
-  } else {
-    copyToClipboard(text, function() {
-      var btn = document.getElementById(btnId);
-      if (btn) {
-        var orig = btn.textContent;
-        btn.textContent = '✓ ' + lines.length + ' Links Copied!';
-        setTimeout(function() { btn.textContent = orig; }, 2000);
-      }
-    });
+    return;
   }
+
+  var lines = [];
+  ids.forEach(function(id) {
+    var o = ordersData.find(function(x) { return x.id === id; });
+    if (!o) return;
+    var url = type === 'msg' ? o.msgLink : o.orderLink;
+    if (url) lines.push(url);
+  });
+  if (!lines.length) return;
+  var text = lines.join('\n');
+  copyToClipboard(text, function() {
+    var btn = document.getElementById(btnId);
+    if (btn) {
+      var orig = btn.textContent;
+      btn.textContent = '✓ ' + lines.length + ' Links Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 2000);
+    }
+  });
 }
 
 function copyToClipboard(text, callback) {
