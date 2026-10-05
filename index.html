@@ -68,6 +68,9 @@
   .bulk-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   .select-all-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.7rem; color: var(--muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .expand-controls { margin-left: auto; display: flex; gap: 6px; }
+  .expand-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 4px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .expand-btn:hover { border-color: var(--navy); color: var(--navy); }
   .select-all-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
 
   .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s; }
@@ -257,6 +260,10 @@
     <div class="select-all-row">
       <input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)">
       <label for="select-all-cb">Select all visible</label>
+      <span class="expand-controls">
+        <button class="expand-btn" onclick="openAllCards()" title="Open every card in the current view">Open All</button>
+        <button class="expand-btn" onclick="collapseAllCards()" title="Collapse every card">Collapse All</button>
+      </span>
     </div>
 
   </div>
@@ -377,6 +384,8 @@ var selectedIds  = {};
 var activeFilter = 'pending';
 var modalContext = null;
 var skuSubsectionState = {}; // { 'default' | 'wood' | 'emboss': true/false for open/closed }
+var openCardIds = {}; // { orderId: true } cards currently expanded; survives re-renders
+var openMsgIds  = {}; // { orderId: true } message panels currently expanded; survives re-renders
 
 // ── Sync helpers ──────────────────────────────────────────────────────────────
 function setSyncLabel(msg) {
@@ -726,6 +735,8 @@ function renderOrderCard(o, i) {
   var cardClass = 'order-card' + (st ? ' ' + CARD_CLASS[st] : '');
   if (isOverdue) cardClass += ' proof-overdue';
   if (selectedIds[o.id]) cardClass += ' selected';
+  if (openCardIds[o.id]) cardClass += ' open';
+  var msgOpen = openMsgIds[o.id] === true;
 
   var html = '<div class="' + cardClass + '" id="card-' + i + '">';
   html += '<div class="card-header">';
@@ -751,9 +762,9 @@ function renderOrderCard(o, i) {
   if (msgs.length > 0) {
     html += '<div class="messages-toggle" onclick="toggleMessages(' + i + ')" id="msg-toggle-' + i + '">';
     html += '<span class="messages-toggle-label">✉ Messages (' + msgs.length + ')</span>';
-    html += '<span class="messages-chevron" id="msg-chev-' + i + '">▶</span>';
+    html += '<span class="messages-chevron" id="msg-chev-' + i + '">' + (msgOpen ? '▼' : '▶') + '</span>';
     html += '</div>';
-    html += '<div class="messages-panel" id="msg-panel-' + i + '">';
+    html += '<div class="messages-panel' + (msgOpen ? ' open' : '') + '" id="msg-panel-' + i + '">';
     html += '<div class="messages-scroll">';
     // REVERSED: newest messages first
     var msgsReversed = msgs.slice().reverse();
@@ -828,6 +839,13 @@ function renderOrderCard(o, i) {
 function renderOrders() {
   var app = document.getElementById('app');
   var html = '';
+
+  // Cards now stay open across re-renders, so hold on to any note text that has been
+  // typed but not yet saved and put it back afterwards.
+  var drafts = {};
+  app.querySelectorAll('.note-input, .private-note-input').forEach(function(el) {
+    if (el.id && el.value !== el.defaultValue) drafts[el.id] = el.value;
+  });
   
   // Group orders by status, and if status is 'approved', further group by SKU
   var byStatus = {};
@@ -886,6 +904,10 @@ function renderOrders() {
   });
 
   app.innerHTML = html || '<div class="empty">No orders found.</div>';
+  Object.keys(drafts).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = drafts[id];
+  });
   applyVisibility();
 }
 
@@ -917,6 +939,7 @@ function toggleMessages(i) {
     if (chev) chev.textContent = '▼';
     // Mark as read: store count of messages seen
     var o = ordersData[i];
+    openMsgIds[o.id] = true;
     var msgs = messagesData[o.orderNum] || [];
     msgReadData[o.orderNum] = msgs.length;
     saveMsgRead();
@@ -929,6 +952,7 @@ function toggleMessages(i) {
   } else {
     panel.classList.remove('open');
     if (chev) chev.textContent = '▶';
+    delete openMsgIds[ordersData[i].id];
   }
 }
 
@@ -936,6 +960,8 @@ function toggleCard(i) {
   var card = document.getElementById('card-' + i);
   var wasOpen = card.classList.contains('open');
   card.classList.toggle('open');
+  if (wasOpen) delete openCardIds[ordersData[i].id];
+  else openCardIds[ordersData[i].id] = true;
 
   // If opening the card (wasn't open before) and it has unread messages, auto-open messages panel
   if (!wasOpen && card.classList.contains('open')) {
@@ -947,6 +973,31 @@ function toggleCard(i) {
       }
     }
   }
+}
+
+// Open every card showing in the current view. In the Approved view this also opens the
+// Self-Inking / Wood Block / Embosser groups, since their cards are hidden while a group is closed.
+// Does not open message panels, so unread message badges are left alone.
+function openAllCards() {
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (!card || card.classList.contains('hidden')) return;
+    openCardIds[o.id] = true;
+    card.classList.add('open');
+  });
+  document.querySelectorAll('.sku-subsection:not(.hidden)').forEach(function(sub) {
+    skuSubsectionState[sub.id.replace('sku-sub-', '')] = true;
+    sub.classList.add('open');
+  });
+}
+
+// Collapse every card (including ones in other views). The Approved groups stay as they are.
+function collapseAllCards() {
+  openCardIds = {};
+  openMsgIds = {};
+  document.querySelectorAll('.order-card.open').forEach(function(card) { card.classList.remove('open'); });
+  document.querySelectorAll('.messages-panel.open').forEach(function(panel) { panel.classList.remove('open'); });
+  document.querySelectorAll('.messages-chevron').forEach(function(chev) { chev.textContent = '▶'; });
 }
 
 function toggleSelect(e, i) {
@@ -1026,7 +1077,11 @@ function setOrderStatus(i, status) {
 }
 
 function applyStatus(ids, status) {
+  // A card that is leaving the current view (its new status no longer matches the active
+  // filter) is closed. Every other open card stays open.
+  var staysInView = activeFilter === 'all' || (activeFilter === 'pending' && !status) || activeFilter === status;
   ids.forEach(function(id) {
+    if (!staysInView) { delete openCardIds[id]; delete openMsgIds[id]; }
     if (status === '') {
       delete statusData[id];
       delete proofTimeData[id];
@@ -1113,9 +1168,8 @@ function savePrivateNoteInline(i) {
   var btn = input.parentElement ? input.parentElement.querySelector('.private-note-save-btn') : null;
   if (btn) { var orig = btn.textContent; btn.textContent = '✓ Saved'; setTimeout(function() { btn.textContent = orig; }, 1500); }
   // Re-render so the "● Note" badge in the card header reflects the change
+  openCardIds[o.id] = true;
   renderOrders();
-  var card = document.getElementById('card-' + i);
-  if (card) card.classList.add('open');
 }
 
 function setFilter(f) {
@@ -1169,10 +1223,29 @@ function copySelectedLinks(type) {
     // Hand off url + stamp text (Type + Private Note) per order via localStorage, rather than
     // a plain URL query string — this avoids URL length limits and lets the merger tool
     // stamp each slip with the right text automatically.
-    var records = [];
+    //
+    // Slips are grouped by stamp type so the merged PDF comes out in production order:
+    // Self-Inking first, then Wood Block, then Embosser. Within a type, oldest order first.
+    // Uses the same effective type that is printed on the slip (manual Type override wins).
+    var SLIP_TYPE_ORDER = { 'default': 0, 'wood': 1, 'emboss': 2 };
+    function slipTypeRank(o) {
+      var r = SLIP_TYPE_ORDER[getEffectiveSkuCategory(o)];
+      return r === undefined ? 99 : r;
+    }
+    var picked = [];
     ids.forEach(function(id) {
       var o = ordersData.find(function(x) { return x.id === id; });
-      if (o && o.slipUrl) records.push({ url: o.slipUrl, stamp: buildSlipStampText(o) });
+      if (o && o.slipUrl) picked.push({ order: o, pos: picked.length });
+    });
+    picked.sort(function(a, b) {
+      var diff = slipTypeRank(a.order) - slipTypeRank(b.order);
+      if (diff !== 0) return diff;
+      diff = parseDate(a.order.orderDate) - parseDate(b.order.orderDate);
+      if (diff !== 0) return diff;
+      return a.pos - b.pos;
+    });
+    var records = picked.map(function(p) {
+      return { url: p.order.slipUrl, stamp: buildSlipStampText(p.order) };
     });
     if (!records.length) return;
     try {
