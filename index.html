@@ -254,6 +254,7 @@
       <button class="bulk-btn" id="copy-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks('order')">Copy Order Links</button>
       <button class="bulk-btn" id="copy-msg-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks('msg')">Copy Message Links</button>
       <button class="bulk-btn" id="copy-slips-btn" style="background:var(--tangerine);color:white;" onclick="copySelectedLinks('slip')">Copy Slip Links</button>
+      <button class="bulk-btn" id="copy-indesign-btn" style="background:var(--pink-dark);color:white;" title="Copies every selected order for the Order to Template InDesign script" onclick="copySelectedInDesign()">Copy for InDesign</button>
       <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear</button>
     </div>
 
@@ -817,6 +818,7 @@ function renderOrderCard(o, i) {
   html += '<div class="actions">';
   if (o.filePath)  html += '<button class="btn btn-navy" id="cf-' + i + '" onclick="copyField(' + i + ',\'file\')">Copy File Path</button>';
   if (o.pers)      html += '<button class="btn btn-pink" id="cp-' + i + '" onclick="copyField(' + i + ',\'pers\')">Copy Personalization</button>';
+  if (o.filePath)  html += '<button class="btn btn-outline" id="ci-' + i + '" title="Copies the file path and personalization together for the Order to Template script in InDesign" onclick="copyField(' + i + ',\'indesign\')">Copy for InDesign</button>';
   if (o.orderLink) html += '<a class="btn btn-outline" href="' + esc(o.orderLink) + '" target="_blank">View Order</a>';
   if (o.msgLink)   html += '<a class="btn btn-outline" href="' + esc(o.msgLink) + '" target="_blank">Message Customer</a>';
   if (o.slipUrl)   html += '<a class="btn btn-green" href="' + esc(o.slipUrl) + '" target="_blank">View Delivery Slip</a>';
@@ -1310,8 +1312,39 @@ function updateCount(counts) {
     (counts.complete||0) + ' complete';
 }
 
+// ── Copy for InDesign ─────────────────────────────────────────────────────────
+// One block per order: file path on the first line, personalization below it.
+// Multiple orders are separated by a line of =====. Read by the
+// "Order to Template" InDesign script (and Claude's order queue).
+function inDesignBlock(o) {
+  return (o.filePath || '') + '\n' + (o.pers || '');
+}
+
+function copySelectedInDesign() {
+  var blocks = [];
+  var skipped = 0;
+  ordersData.forEach(function(o) {           // page order, not click order
+    if (!selectedIds[o.id]) return;
+    if (!o.filePath) { skipped++; return; }
+    blocks.push(inDesignBlock(o));
+  });
+  if (!blocks.length) return;
+  copyToClipboard(blocks.join('\n=====\n'), function() {
+    var btn = document.getElementById('copy-indesign-btn');
+    if (!btn) return;
+    var orig = 'Copy for InDesign';
+    btn.textContent = '✓ ' + blocks.length + ' Copied' + (skipped ? ' (' + skipped + ' no path)' : '') + '!';
+    setTimeout(function() { btn.textContent = orig; }, 2500);
+  });
+}
+
 function copyField(i, field) {
   var o = ordersData[i];
+  if (field === 'indesign') {
+    if (!o.filePath) return;
+    copyToClipboard(inDesignBlock(o), function() { flashCopied('ci-' + i); });
+    return;
+  }
   var text = field === 'file' ? o.filePath : o.pers;
   var btnId = field === 'file' ? 'cf-' + i : 'cp-' + i;
   if (!text) return;
