@@ -96,6 +96,8 @@
   .order-meta { font-size: 0.7rem; color: var(--muted); display: flex; gap: 12px; flex: 1; flex-wrap: wrap; align-items: center; }
   .badge { font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   .badge-design { background: #faeef2; color: var(--pink-dark); }
+  .badge-qty { background: #eef1f5; color: var(--navy); }
+  .badge-qty.multi { background: var(--tangerine); color: white; }
   .badge-slip { background: #eef3ea; color: var(--green); }
   .badge-note { background: var(--proof-overdue); color: white; display: inline-flex; align-items: center; gap: 4px; cursor: help; }
   .badge-msg { background: var(--msg-color); color: white; font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px; animation: msg-pulse 2s ease-in-out infinite; }
@@ -631,6 +633,12 @@ function buildSlipStampText(o) {
   return note ? (type + '  —  ' + note) : type;
 }
 
+// Quantity from column F. Returns the number if it's a clean number, otherwise the raw text.
+function qtyNumber(o) {
+  var n = parseInt(o.qty, 10);
+  return isNaN(n) ? null : n;
+}
+
 function loadMessages(callback) {
   var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=' + SHEET2_GID;
   fetch(url).then(function(res) {
@@ -684,6 +692,7 @@ function loadOrders() {
             orderLink: (row[2] || '').trim(),
             pers: (row[3] || '').trim(),
             filePath: (row[4] || '').trim(),
+            qty: (row[5] || '').trim(), // column F
             orderNum: orderNum,
             orderDate: (row[7] || '').trim(),
             msgLink: (row[9] || '').trim(),
@@ -739,6 +748,7 @@ function renderOrderCard(o, i) {
   if (selectedIds[o.id]) cardClass += ' selected';
   if (openCardIds[o.id]) cardClass += ' open';
   var msgOpen = openMsgIds[o.id] === true;
+  var qn = qtyNumber(o);
 
   var html = '<div class="' + cardClass + '" id="card-' + i + '">';
   html += '<div class="card-header">';
@@ -746,6 +756,7 @@ function renderOrderCard(o, i) {
   html += '<span class="order-name" onclick="toggleCard(' + i + ')">' + esc(o.name) + '</span>';
   html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
   if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
+  if (o.qty) html += '<span><span class="badge badge-qty' + (qn !== null && qn > 1 ? ' multi' : '') + '">Qty ' + esc(o.qty) + '</span></span>';
   if (st) html += '<span><span class="status-badge ' + STATUS_BADGE[st] + '">' + STATUS_LABELS[st] + '</span></span>';
   if (proofTs) html += '<span class="proof-sent-time">sent ' + formatProofTime(proofTs) + '</span>';
   if (isOverdue) html += '<span><span class="badge-overdue">24h passed</span></span>';
