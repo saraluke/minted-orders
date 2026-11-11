@@ -68,6 +68,9 @@
   .bulk-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   .select-all-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.7rem; color: var(--muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .expand-controls { margin-left: auto; display: flex; gap: 6px; }
+  .expand-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 4px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .expand-btn:hover { border-color: var(--navy); color: var(--navy); }
   .select-all-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
 
   .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s; }
@@ -93,7 +96,10 @@
   .order-meta { font-size: 0.7rem; color: var(--muted); display: flex; gap: 12px; flex: 1; flex-wrap: wrap; align-items: center; }
   .badge { font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   .badge-design { background: #faeef2; color: var(--pink-dark); }
+  .badge-qty { background: #eef1f5; color: var(--navy); }
+  .badge-qty.multi { background: var(--tangerine); color: white; }
   .badge-slip { background: #eef3ea; color: var(--green); }
+  .badge-note { background: var(--proof-overdue); color: white; display: inline-flex; align-items: center; gap: 4px; cursor: help; }
   .badge-msg { background: var(--msg-color); color: white; font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px; animation: msg-pulse 2s ease-in-out infinite; }
   @keyframes msg-pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
   .status-badge { font-size: 0.6rem; padding: 2px 9px; border-radius: 20px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: white; }
@@ -133,6 +139,17 @@
   .note-input:focus { outline: none; border-color: var(--status-production); }
   .note-save-btn { background: var(--status-production); color: white; border: none; border-radius: 4px; padding: 7px 14px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
   .note-save-btn:hover { opacity: 0.85; }
+
+  /* ── Private note ── */
+  .private-note-area { margin-top: 10px; }
+  .private-note-input { flex: 1; border: 1px solid #e0c0c5; border-radius: 4px; padding: 7px 10px; font-family: 'Montserrat', sans-serif; font-size: 0.75rem; color: var(--text); background: #fdf6f7; }
+  .private-note-input:focus { outline: none; border-color: var(--proof-overdue); }
+  .private-note-save-btn { background: var(--proof-overdue); color: white; border: none; border-radius: 4px; padding: 7px 14px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+  .private-note-save-btn:hover { opacity: 0.85; }
+
+  /* ── Type dropdown ── */
+  .type-select { border: 1px solid var(--border); border-radius: 4px; padding: 7px 10px; font-family: 'Montserrat', sans-serif; font-size: 0.75rem; color: var(--text); background: white; cursor: pointer; }
+  .type-select:focus { outline: none; border-color: var(--status-approved); }
 
   .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
   .btn { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; white-space: nowrap; }
@@ -239,12 +256,17 @@
       <button class="bulk-btn" id="copy-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks('order')">Copy Order Links</button>
       <button class="bulk-btn" id="copy-msg-links-btn" style="background:#5a7a6a;color:white;" onclick="copySelectedLinks('msg')">Copy Message Links</button>
       <button class="bulk-btn" id="copy-slips-btn" style="background:var(--tangerine);color:white;" onclick="copySelectedLinks('slip')">Copy Slip Links</button>
+      <button class="bulk-btn" id="copy-indesign-btn" style="background:var(--pink-dark);color:white;" title="Copies every selected order for the Order to Template InDesign script" onclick="copySelectedInDesign()">Copy for InDesign</button>
       <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Clear</button>
     </div>
 
     <div class="select-all-row">
       <input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)">
       <label for="select-all-cb">Select all visible</label>
+      <span class="expand-controls">
+        <button class="expand-btn" onclick="openAllCards()" title="Open every card in the current view">Open All</button>
+        <button class="expand-btn" onclick="collapseAllCards()" title="Collapse every card">Collapse All</button>
+      </span>
     </div>
 
   </div>
@@ -274,6 +296,8 @@ var STATUS_KEY  = 'slc_minted_status';
 var NOTES_KEY   = 'slc_minted_notes';
 var MSG_READ_KEY = 'slc_minted_msg_read'; // stores { orderNum: countSeen }
 var PROOF_TIME_KEY = 'slc_minted_proof_time'; // stores { orderId: timestamp ms }
+var PRIVATE_NOTE_KEY = 'slc_minted_private_notes'; // stores { orderId: noteText } — private, always visible
+var SKU_OVERRIDE_KEY = 'slc_minted_sku_override'; // stores { orderId: 'default'|'wood'|'emboss' } — manual type override
 
 // SKU corrections: maps incorrect SKU -> correct design name for display & sorting
 var SKU_CORRECTIONS = {
@@ -282,7 +306,7 @@ var SKU_CORRECTIONS = {
   'S25716': 'landingham-wood',
   'S25669': 'wesley-wood',
   'S25751': 'serafina',
-  'S25746': 'perkins',
+  'S25746': 'perkins-wood',
   'S25680': 'patel-wood',
   'S25710': 'Hearts-4-wood',
   'S25740': 'hearts-wendy-wood',
@@ -296,6 +320,7 @@ var SKU_CORRECTIONS = {
   '89785': 'snowflake-seal-wood',
   'S25708': 'claire-bows-wood',
   'S25722': 'goodall',
+  'S25709': 'karlyn-wood',
   'S25729': 'schofield-wood',
   'S25675': 'Johannessen-wood',
   'S25721': 'swenson-wood',
@@ -348,6 +373,7 @@ var SKU_CORRECTIONS = {
   'S25720': 'brooklyn-wood',
   'S25715': 'lanford-wood',
   'S25696': 'dalton-wood',
+  'S25671': 'oliver-sarah-wood',
   'S25707': 'northpole-address2-wood',
   'S25663': 'lily-oliver-wood'
 };
@@ -357,11 +383,15 @@ var statusData   = {};
 var notesData    = {};
 var msgReadData  = {}; // { orderNum: countSeen }
 var proofTimeData = {}; // { orderId: timestamp ms }
+var privateNotesData = {}; // { orderId: noteText }
+var skuOverrideData  = {}; // { orderId: 'default'|'wood'|'emboss' }
 var messagesData = {}; // { orderNum: [ {name, text, link}, ... ] }
 var selectedIds  = {};
 var activeFilter = 'pending';
 var modalContext = null;
 var skuSubsectionState = {}; // { 'default' | 'wood' | 'emboss': true/false for open/closed }
+var openCardIds = {}; // { orderId: true } cards currently expanded; survives re-renders
+var openMsgIds  = {}; // { orderId: true } message panels currently expanded; survives re-renders
 
 // ── Sync helpers ──────────────────────────────────────────────────────────────
 function setSyncLabel(msg) {
@@ -419,10 +449,11 @@ function postToScript(key, value, onDone) {
 
 function loadPersistedData(callback) {
   setSyncLabel('Syncing...');
-  var statusDone = false, notesDone = false, msgReadDone = false, proofTimeDone = false;
+  var statusDone = false, notesDone = false, msgReadDone = false, proofTimeDone = false,
+      privateNoteDone = false, skuOverrideDone = false;
 
   function checkDone() {
-    if (statusDone && notesDone && msgReadDone && proofTimeDone) { setSyncLabel('Synced'); callback(); }
+    if (statusDone && notesDone && msgReadDone && proofTimeDone && privateNoteDone && skuOverrideDone) { setSyncLabel('Synced'); callback(); }
   }
 
   fetch(scriptURL({ action: 'get', key: STATUS_KEY }))
@@ -468,6 +499,28 @@ function loadPersistedData(callback) {
       try { var p = localStorage.getItem(PROOF_TIME_KEY); if (p) proofTimeData = JSON.parse(p); } catch(e) {}
       proofTimeDone = true; checkDone();
     });
+
+  fetch(scriptURL({ action: 'get', key: PRIVATE_NOTE_KEY }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.value) { try { privateNotesData = JSON.parse(data.value); } catch(e) { privateNotesData = {}; } }
+      else { privateNotesData = {}; }
+      privateNoteDone = true; checkDone();
+    }).catch(function() {
+      try { var pn = localStorage.getItem(PRIVATE_NOTE_KEY); if (pn) privateNotesData = JSON.parse(pn); } catch(e) {}
+      privateNoteDone = true; checkDone();
+    });
+
+  fetch(scriptURL({ action: 'get', key: SKU_OVERRIDE_KEY }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.value) { try { skuOverrideData = JSON.parse(data.value); } catch(e) { skuOverrideData = {}; } }
+      else { skuOverrideData = {}; }
+      skuOverrideDone = true; checkDone();
+    }).catch(function() {
+      try { var so = localStorage.getItem(SKU_OVERRIDE_KEY); if (so) skuOverrideData = JSON.parse(so); } catch(e) {}
+      skuOverrideDone = true; checkDone();
+    });
 }
 
 function saveStatus() {
@@ -494,6 +547,20 @@ function saveProofTime() {
   var val = JSON.stringify(proofTimeData);
   try { localStorage.setItem(PROOF_TIME_KEY, val); } catch(e) {}
   postToScript(PROOF_TIME_KEY, val, null);
+}
+
+function savePrivateNotes() {
+  var val = JSON.stringify(privateNotesData);
+  try { localStorage.setItem(PRIVATE_NOTE_KEY, val); } catch(e) {}
+  setSyncLabel('Saving...');
+  postToScript(PRIVATE_NOTE_KEY, val, function() { setSyncLabel('Saved'); });
+}
+
+function saveSkuOverride() {
+  var val = JSON.stringify(skuOverrideData);
+  try { localStorage.setItem(SKU_OVERRIDE_KEY, val); } catch(e) {}
+  setSyncLabel('Saving...');
+  postToScript(SKU_OVERRIDE_KEY, val, function() { setSyncLabel('Saved'); });
 }
 
 // ── Sheet loading ─────────────────────────────────────────────────────────────
@@ -554,6 +621,24 @@ function getSkuCategory(sku) {
   if (lower.endsWith('-wood')) return 'wood';
   if (lower.endsWith('-emboss')) return 'emboss';
   return 'default';
+}
+
+// Effective category = manual override (if she's changed it) falling back to the auto SKU-based detection
+function getEffectiveSkuCategory(o) {
+  return skuOverrideData[o.id] || getSkuCategory(o.design);
+}
+
+// Combined "Type — private note" text stamped onto each delivery slip PDF by the merger tool
+function buildSlipStampText(o) {
+  var type = TYPE_LABELS[getEffectiveSkuCategory(o)] || '';
+  var note = (privateNotesData[o.id] || '').trim();
+  return note ? (type + '  —  ' + note) : type;
+}
+
+// Quantity from column F. Returns the number if it's a clean number, otherwise the raw text.
+function qtyNumber(o) {
+  var n = parseInt(o.qty, 10);
+  return isNaN(n) ? null : n;
 }
 
 function loadMessages(callback) {
@@ -617,6 +702,7 @@ function loadOrders() {
             orderLink: (row[2] || '').trim(),
             pers: (row[3] || '').trim(),
             filePath: (row[4] || '').trim(),
+            qty: (row[5] || '').trim(), // column F
             orderNum: orderNum,
             orderDate: (row[7] || '').trim(),
             msgLink: (row[9] || '').trim(),
@@ -656,17 +742,23 @@ function hasUnreadMessages(o) {
 var STATUS_LABELS = { proof: 'Proof Sent', 'proof-complete': 'Proof Ready', approved: 'Approved', production: 'In Production', complete: 'Complete' };
 var STATUS_BADGE  = { proof: 'sb-proof', 'proof-complete': 'sb-proof-complete', approved: 'sb-approved', production: 'sb-production', complete: 'sb-complete' };
 var CARD_CLASS    = { proof: 's-proof', 'proof-complete': 's-proof-complete', approved: 's-approved', production: 's-production', complete: 's-complete' };
+var TYPE_LABELS   = { default: 'Self-Inking', wood: 'Wood Block', emboss: 'Embosser' };
 
 function renderOrderCard(o, i) {
   var st = statusData[o.id] || '';
   var note = notesData[o.id] || '';
+  var privateNote = privateNotesData[o.id] || '';
   var msgs = messagesData[o.orderNum] || [];
   var unread = hasUnreadMessages(o);
   var proofTs = (st === 'proof') ? (proofTimeData[o.id] || null) : null;
   var isOverdue = proofTs && (Date.now() - proofTs > 24 * 60 * 60 * 1000);
+  var effectiveType = getEffectiveSkuCategory(o);
   var cardClass = 'order-card' + (st ? ' ' + CARD_CLASS[st] : '');
   if (isOverdue) cardClass += ' proof-overdue';
   if (selectedIds[o.id]) cardClass += ' selected';
+  if (openCardIds[o.id]) cardClass += ' open';
+  var msgOpen = openMsgIds[o.id] === true;
+  var qn = qtyNumber(o);
 
   var html = '<div class="' + cardClass + '" id="card-' + i + '">';
   html += '<div class="card-header">';
@@ -674,10 +766,12 @@ function renderOrderCard(o, i) {
   html += '<span class="order-name" onclick="toggleCard(' + i + ')">' + esc(o.name) + '</span>';
   html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
   if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
+  if (o.qty) html += '<span><span class="badge badge-qty' + (qn !== null && qn > 1 ? ' multi' : '') + '">Qty ' + esc(o.qty) + '</span></span>';
   if (st) html += '<span><span class="status-badge ' + STATUS_BADGE[st] + '">' + STATUS_LABELS[st] + '</span></span>';
   if (proofTs) html += '<span class="proof-sent-time">sent ' + formatProofTime(proofTs) + '</span>';
   if (isOverdue) html += '<span><span class="badge-overdue">24h passed</span></span>';
   if (unread) html += '<span><span class="badge-msg">✉ ' + msgs.length + ' message' + (msgs.length !== 1 ? 's' : '') + '</span></span>';
+  if (privateNote) html += '<span><span class="badge badge-note" title="' + esc(privateNote) + '">● Note</span></span>';
   if (o.slipUrl) html += '<span><span class="badge badge-slip">✓ Slip</span></span>';
   if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
   if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
@@ -691,9 +785,9 @@ function renderOrderCard(o, i) {
   if (msgs.length > 0) {
     html += '<div class="messages-toggle" onclick="toggleMessages(' + i + ')" id="msg-toggle-' + i + '">';
     html += '<span class="messages-toggle-label">✉ Messages (' + msgs.length + ')</span>';
-    html += '<span class="messages-chevron" id="msg-chev-' + i + '">▶</span>';
+    html += '<span class="messages-chevron" id="msg-chev-' + i + '">' + (msgOpen ? '▼' : '▶') + '</span>';
     html += '</div>';
-    html += '<div class="messages-panel" id="msg-panel-' + i + '">';
+    html += '<div class="messages-panel' + (msgOpen ? ' open' : '') + '" id="msg-panel-' + i + '">';
     html += '<div class="messages-scroll">';
     // REVERSED: newest messages first
     var msgsReversed = msgs.slice().reverse();
@@ -717,6 +811,14 @@ function renderOrderCard(o, i) {
     html += '<div class="section-label">File Path</div>';
     html += '<div class="file-path">' + esc(o.filePath) + '</div>';
   }
+
+  html += '<div class="section-label">Type</div>';
+  html += '<select class="type-select" id="type-select-' + i + '" onchange="setSkuOverride(' + i + ', this.value)">';
+  ['default','wood','emboss'].forEach(function(cat) {
+    html += '<option value="' + cat + '"' + (effectiveType === cat ? ' selected' : '') + '>' + TYPE_LABELS[cat] + '</option>';
+  });
+  html += '</select>';
+
   html += '<div class="production-note-area">';
   html += '<div class="production-note-display' + (note ? ' visible' : '') + '" id="note-display-' + i + '">Production note: ' + esc(note) + '</div>';
   if (st === 'production') {
@@ -727,9 +829,18 @@ function renderOrderCard(o, i) {
   }
   html += '</div>';
 
+  html += '<div class="private-note-area">';
+  html += '<div class="section-label">Private Note</div>';
+  html += '<div class="note-edit-row">';
+  html += '<input class="private-note-input" id="private-note-input-' + i + '" placeholder="Add a private note (only visible to you)..." value="' + esc(privateNote) + '">';
+  html += '<button class="private-note-save-btn" onclick="savePrivateNoteInline(' + i + ')">Save</button>';
+  html += '</div>';
+  html += '</div>';
+
   html += '<div class="actions">';
   if (o.filePath)  html += '<button class="btn btn-navy" id="cf-' + i + '" onclick="copyField(' + i + ',\'file\')">Copy File Path</button>';
   if (o.pers)      html += '<button class="btn btn-pink" id="cp-' + i + '" onclick="copyField(' + i + ',\'pers\')">Copy Personalization</button>';
+  if (o.filePath)  html += '<button class="btn btn-outline" id="ci-' + i + '" title="Copies the file path and personalization together for the Order to Template script in InDesign" onclick="copyField(' + i + ',\'indesign\')">Copy for InDesign</button>';
   if (o.orderLink) html += '<a class="btn btn-outline" href="' + esc(o.orderLink) + '" target="_blank">View Order</a>';
   if (o.msgLink)   html += '<a class="btn btn-outline" href="' + esc(o.msgLink) + '" target="_blank">Message Customer</a>';
   if (o.slipUrl)   html += '<a class="btn btn-green" href="' + esc(o.slipUrl) + '" target="_blank">View Delivery Slip</a>';
@@ -752,6 +863,13 @@ function renderOrderCard(o, i) {
 function renderOrders() {
   var app = document.getElementById('app');
   var html = '';
+
+  // Cards now stay open across re-renders, so hold on to any note text that has been
+  // typed but not yet saved and put it back afterwards.
+  var drafts = {};
+  app.querySelectorAll('.note-input, .private-note-input').forEach(function(el) {
+    if (el.id && el.value !== el.defaultValue) drafts[el.id] = el.value;
+  });
   
   // Group orders by status, and if status is 'approved', further group by SKU
   var byStatus = {};
@@ -769,10 +887,10 @@ function renderOrders() {
     if (!orders || orders.length === 0) return;
 
     if (status === 'approved') {
-      // Group approved orders by SKU category
+      // Group approved orders by effective SKU category (manual override wins over auto-detection)
       var bySkuCat = { default: [], wood: [], emboss: [] };
       orders.forEach(function(item) {
-        var cat = getSkuCategory(item.order.design);
+        var cat = getEffectiveSkuCategory(item.order);
         bySkuCat[cat].push(item);
       });
 
@@ -810,6 +928,10 @@ function renderOrders() {
   });
 
   app.innerHTML = html || '<div class="empty">No orders found.</div>';
+  Object.keys(drafts).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = drafts[id];
+  });
   applyVisibility();
 }
 
@@ -823,6 +945,14 @@ function toggleSkuSubsection(category) {
   }
 }
 
+function setSkuOverride(i, value) {
+  var o = ordersData[i];
+  skuOverrideData[o.id] = value;
+  saveSkuOverride();
+  // Re-render so the order moves into the right subsection if it's Approved
+  renderOrders();
+}
+
 function toggleMessages(i) {
   var panel = document.getElementById('msg-panel-' + i);
   var chev  = document.getElementById('msg-chev-' + i);
@@ -833,6 +963,7 @@ function toggleMessages(i) {
     if (chev) chev.textContent = '▼';
     // Mark as read: store count of messages seen
     var o = ordersData[i];
+    openMsgIds[o.id] = true;
     var msgs = messagesData[o.orderNum] || [];
     msgReadData[o.orderNum] = msgs.length;
     saveMsgRead();
@@ -845,6 +976,7 @@ function toggleMessages(i) {
   } else {
     panel.classList.remove('open');
     if (chev) chev.textContent = '▶';
+    delete openMsgIds[ordersData[i].id];
   }
 }
 
@@ -852,6 +984,8 @@ function toggleCard(i) {
   var card = document.getElementById('card-' + i);
   var wasOpen = card.classList.contains('open');
   card.classList.toggle('open');
+  if (wasOpen) delete openCardIds[ordersData[i].id];
+  else openCardIds[ordersData[i].id] = true;
 
   // If opening the card (wasn't open before) and it has unread messages, auto-open messages panel
   if (!wasOpen && card.classList.contains('open')) {
@@ -863,6 +997,31 @@ function toggleCard(i) {
       }
     }
   }
+}
+
+// Open every card showing in the current view. In the Approved view this also opens the
+// Self-Inking / Wood Block / Embosser groups, since their cards are hidden while a group is closed.
+// Does not open message panels, so unread message badges are left alone.
+function openAllCards() {
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (!card || card.classList.contains('hidden')) return;
+    openCardIds[o.id] = true;
+    card.classList.add('open');
+  });
+  document.querySelectorAll('.sku-subsection:not(.hidden)').forEach(function(sub) {
+    skuSubsectionState[sub.id.replace('sku-sub-', '')] = true;
+    sub.classList.add('open');
+  });
+}
+
+// Collapse every card (including ones in other views). The Approved groups stay as they are.
+function collapseAllCards() {
+  openCardIds = {};
+  openMsgIds = {};
+  document.querySelectorAll('.order-card.open').forEach(function(card) { card.classList.remove('open'); });
+  document.querySelectorAll('.messages-panel.open').forEach(function(panel) { panel.classList.remove('open'); });
+  document.querySelectorAll('.messages-chevron').forEach(function(chev) { chev.textContent = '▶'; });
 }
 
 function toggleSelect(e, i) {
@@ -942,7 +1101,11 @@ function setOrderStatus(i, status) {
 }
 
 function applyStatus(ids, status) {
+  // A card that is leaving the current view (its new status no longer matches the active
+  // filter) is closed. Every other open card stays open.
+  var staysInView = activeFilter === 'all' || (activeFilter === 'pending' && !status) || activeFilter === status;
   ids.forEach(function(id) {
+    if (!staysInView) { delete openCardIds[id]; delete openMsgIds[id]; }
     if (status === '') {
       delete statusData[id];
       delete proofTimeData[id];
@@ -1019,6 +1182,20 @@ function saveNoteInline(i) {
   if (btn) { var orig = btn.textContent; btn.textContent = '✓ Saved'; setTimeout(function() { btn.textContent = orig; }, 1500); }
 }
 
+function savePrivateNoteInline(i) {
+  var o = ordersData[i];
+  var input = document.getElementById('private-note-input-' + i);
+  if (!input) return;
+  var note = input.value.trim();
+  privateNotesData[o.id] = note;
+  savePrivateNotes();
+  var btn = input.parentElement ? input.parentElement.querySelector('.private-note-save-btn') : null;
+  if (btn) { var orig = btn.textContent; btn.textContent = '✓ Saved'; setTimeout(function() { btn.textContent = orig; }, 1500); }
+  // Re-render so the "● Note" badge in the card header reflects the change
+  openCardIds[o.id] = true;
+  renderOrders();
+}
+
 function setFilter(f) {
   activeFilter = f;
   document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -1045,7 +1222,8 @@ function applyVisibility() {
     else counts.pending++;
     var matchesStatus = activeFilter === 'all' || (activeFilter === 'pending' && !st) || activeFilter === st;
     var note = (notesData[o.id] || '').toLowerCase();
-    var matchesNote = !noteQuery || note.indexOf(noteQuery) !== -1;
+    var privateNote = (privateNotesData[o.id] || '').toLowerCase();
+    var matchesNote = !noteQuery || note.indexOf(noteQuery) !== -1 || privateNote.indexOf(noteQuery) !== -1;
     card.classList.toggle('hidden', !(matchesStatus && matchesNote));
   });
   
@@ -1059,38 +1237,71 @@ function applyVisibility() {
   updateCount(counts);
 }
 
+var SLIP_MERGE_PAYLOAD_KEY = 'slc_slip_merge_payload';
+
 function copySelectedLinks(type) {
   var ids = Object.keys(selectedIds);
-  var lines = [];
-  ids.forEach(function(id) {
-    var o = ordersData.find(function(x) { return x.id === id; });
-    if (!o) return;
-    var url = type === 'msg' ? o.msgLink : type === 'slip' ? o.slipUrl : o.orderLink;
-    if (url) lines.push(url);
-  });
-  if (!lines.length) return;
-  var text = lines.join('\n');
   var btnId = type === 'msg' ? 'copy-msg-links-btn' : type === 'slip' ? 'copy-slips-btn' : 'copy-links-btn';
 
   if (type === 'slip') {
-    var encoded = encodeURIComponent(text);
-    window.open('slip-merger.html?urls=' + encoded, '_blank');
+    // Hand off url + stamp text (Type + Private Note) per order via localStorage, rather than
+    // a plain URL query string — this avoids URL length limits and lets the merger tool
+    // stamp each slip with the right text automatically.
+    //
+    // Slips are grouped by stamp type so the merged PDF comes out in production order:
+    // Self-Inking first, then Wood Block, then Embosser. Within a type, oldest order first.
+    // Uses the same effective type that is printed on the slip (manual Type override wins).
+    var SLIP_TYPE_ORDER = { 'default': 0, 'wood': 1, 'emboss': 2 };
+    function slipTypeRank(o) {
+      var r = SLIP_TYPE_ORDER[getEffectiveSkuCategory(o)];
+      return r === undefined ? 99 : r;
+    }
+    var picked = [];
+    ids.forEach(function(id) {
+      var o = ordersData.find(function(x) { return x.id === id; });
+      if (o && o.slipUrl) picked.push({ order: o, pos: picked.length });
+    });
+    picked.sort(function(a, b) {
+      var diff = slipTypeRank(a.order) - slipTypeRank(b.order);
+      if (diff !== 0) return diff;
+      diff = parseDate(a.order.orderDate) - parseDate(b.order.orderDate);
+      if (diff !== 0) return diff;
+      return a.pos - b.pos;
+    });
+    var records = picked.map(function(p) {
+      return { url: p.order.slipUrl, stamp: buildSlipStampText(p.order) };
+    });
+    if (!records.length) return;
+    try {
+      localStorage.setItem(SLIP_MERGE_PAYLOAD_KEY, JSON.stringify({ ts: Date.now(), records: records }));
+    } catch(e) {}
+    window.open('slip-merger.html', '_blank');
     var btn = document.getElementById(btnId);
     if (btn) {
       var orig = btn.textContent;
       btn.textContent = '✓ Opening Merger...';
       setTimeout(function() { btn.textContent = orig; }, 2000);
     }
-  } else {
-    copyToClipboard(text, function() {
-      var btn = document.getElementById(btnId);
-      if (btn) {
-        var orig = btn.textContent;
-        btn.textContent = '✓ ' + lines.length + ' Links Copied!';
-        setTimeout(function() { btn.textContent = orig; }, 2000);
-      }
-    });
+    return;
   }
+
+  var lines = [];
+  ids.forEach(function(id) {
+    var o = ordersData.find(function(x) { return x.id === id; });
+    if (!o) return;
+    var url = type === 'msg' ? o.msgLink : o.orderLink;
+    if (url) lines.push(url);
+  });
+  if (!lines.length) return;
+  var text = lines.join('\n');
+  copyToClipboard(text, function() {
+    var btn = document.getElementById(btnId);
+    if (btn) {
+      var orig = btn.textContent;
+      btn.textContent = '✓ ' + lines.length + ' Links Copied!';
+      setTimeout(function() { btn.textContent = orig; }, 2000);
+    }
+  });
 }
 
 function copyToClipboard(text, callback) {
@@ -1123,8 +1334,39 @@ function updateCount(counts) {
     (counts.complete||0) + ' complete';
 }
 
+// ── Copy for InDesign ─────────────────────────────────────────────────────────
+// One block per order: file path on the first line, personalization below it.
+// Multiple orders are separated by a line of =====. Read by the
+// "Order to Template" InDesign script (and Claude's order queue).
+function inDesignBlock(o) {
+  return (o.filePath || '') + '\n' + (o.pers || '');
+}
+
+function copySelectedInDesign() {
+  var blocks = [];
+  var skipped = 0;
+  ordersData.forEach(function(o) {           // page order, not click order
+    if (!selectedIds[o.id]) return;
+    if (!o.filePath) { skipped++; return; }
+    blocks.push(inDesignBlock(o));
+  });
+  if (!blocks.length) return;
+  copyToClipboard(blocks.join('\n=====\n'), function() {
+    var btn = document.getElementById('copy-indesign-btn');
+    if (!btn) return;
+    var orig = 'Copy for InDesign';
+    btn.textContent = '✓ ' + blocks.length + ' Copied' + (skipped ? ' (' + skipped + ' no path)' : '') + '!';
+    setTimeout(function() { btn.textContent = orig; }, 2500);
+  });
+}
+
 function copyField(i, field) {
   var o = ordersData[i];
+  if (field === 'indesign') {
+    if (!o.filePath) return;
+    copyToClipboard(inDesignBlock(o), function() { flashCopied('ci-' + i); });
+    return;
+  }
   var text = field === 'file' ? o.filePath : o.pers;
   var btnId = field === 'file' ? 'cf-' + i : 'cp-' + i;
   if (!text) return;
